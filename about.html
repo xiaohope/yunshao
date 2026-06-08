@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>关于云梢</title>
+  <style>
+    :root {
+      --bg-primary: #F0F2F7;
+      --bg-card: #FFFFFF;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --accent: #3B82F6;
+      --accent-light: #60A5FA;
+      --accent-gradient: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+      --cta: #F97316;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --card-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      --glass-bg: rgba(255,255,255,0.7);
+      --glass-border: rgba(255,255,255,0.5);
+      --icon-bg: rgba(59,130,246,0.1);
+      --divider: rgba(0,0,0,0.08);
+    }
+    
+    body.theme-dark {
+      --bg-primary: #0A0E27;
+      --bg-card: #141831;
+      --text-primary: #E2E8F0;
+      --text-secondary: #94A3B8;
+      --card-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      --glass-bg: rgba(20,24,49,0.8);
+      --glass-border: rgba(255,255,255,0.1);
+      --icon-bg: rgba(59,130,246,0.15);
+      --divider: rgba(255,255,255,0.08);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    
+    /* 背景装饰 - 卡通影视星球场景 */
+    .bg-decoration {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 480px;
+      background: linear-gradient(180deg, #0A1628 0%, #132044 50%, #1a2d5e 100%);
+      border-radius: 0 0 40px 40px;
+      z-index: 0;
+      overflow: hidden;
+    }
+    
+    .bg-decoration svg {
+      width: 100%;
+      height: 100%;
+    }
+    
+    body.theme-dark .bg-decoration {
+      background: linear-gradient(180deg, #0A1628 0%, #132044 50%, #1a2d5e 100%);
+    }
+    
+    /* 返回按钮 */
+    .back-btn {
+      position: fixed;
+      top: max(16px, env(safe-area-inset-top));
+      left: 16px;
+      z-index: 100;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: var(--card-shadow);
+    }
+    
+    .back-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(59,130,246,0.2);
+    }
+    
+    .back-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .back-btn svg {
+      width: 20px;
+      height: 20px;
+      fill: #fff;
+    }
+    
+    /* 主容器 */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 400px 20px 40px;
+    }
+    
+    /* 页面标题 */
+    .page-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 20px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      opacity: 0;
+      animation: fadeInUp 0.5s ease forwards;
+    }
+    
+    /* Logo 卡片 - 简洁白色卡片 */
+    .logo-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-xl);
+      padding: 40px 24px 32px;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.1s forwards;
+    }
+    
+    /* Logo 包装器 */
+    .logo-wrapper {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 24px;
+    }
+    
+    .logo-cloud {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    .logo-cloud svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 8px 24px rgba(59,130,246,0.35));
+    }
+    
+    .logo-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(59,130,246,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+      50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.3; }
+    }
+    
+    .app-name {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    
+    .version-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--icon-bg);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    
+    .app-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    
+    /* 特性卡片 */
+    .features-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.2s forwards;
+    }
+    
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: var(--accent-gradient);
+      border-radius: 2px;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    
+    .feature-item {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    
+    .feature-item.show {
+      animation: fadeInUp 0.4s ease forwards;
+    }
+    
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 10px;
+      background: var(--icon-bg);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    
+    .feature-item:hover .feature-icon {
+      transform: scale(1.08);
+      background: rgba(59,130,246,0.2);
+    }
+    
+    .feature-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--accent);
+    }
+    
+    .feature-name {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    /* 技术信息卡片 */
+    .tech-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.3s forwards;
+    }
+    
+    .tech-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .tech-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .tech-item svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--accent);
+      flex-shrink: 0;
+    }
+    
+    .tech-item span {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    /* 联系/开源卡片 */
+    .contact-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.4s forwards;
+    }
+    
+    .contact-links {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg-primary);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .contact-item:hover {
+      background: var(--icon-bg);
+      transform: translateX(4px);
+    }
+    
+    .contact-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-gradient);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .contact-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: #fff;
+    }
+    
+    .contact-text {
+      flex: 1;
+    }
+    
+    .contact-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .contact-value {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    
+    .contact-arrow {
+      width: 16px;
+      height: 16px;
+      fill: var(--text-secondary);
+      opacity: 0.5;
+    }
+    
+    /* 免责声明 */
+    .disclaimer-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 16px;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.5s forwards;
+    }
+    
+    .disclaimer-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      text-align: justify;
+    }
+    
+    /* 版权信息 */
+    .copyright {
+      text-align: center;
+      padding: 24px 0;
+      opacity: 0;
+      animation: fadeInUp 0.5s ease 0.6s forwards;
+    }
+    
+    .copyright-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    
+    .copyright-brand {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    
+    /* 动画 */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* 响应式 */
+    @media (min-width: 768px) {
+      .container {
+        padding-top: 100px;
+      }
+      
+      .page-title {
+        font-size: 22px;
+      }
+      
+      .features-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
+      }
+      
+      .feature-item {
+        padding: 8px 0;
+      }
+      
+      .logo-card {
+        padding: 48px 32px 40px;
+      }
+      
+      .app-name {
+        font-size: 30px;
+      }
+      
+      .contact-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      
+      .contact-item {
+        flex: 1;
+        min-width: 200px;
+      }
+    }
+    
+    /* 深色模式适配 */
+    @media (prefers-color-scheme: dark) {
+      :root:not(.theme-light) {
+        --bg-primary: #0A0E27;
+        --bg-card: #141831;
+        --text-primary: #E2E8F0;
+        --text-secondary: #94A3B8;
+        --card-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        --glass-bg: rgba(20,24,49,0.8);
+        --glass-border: rgba(255,255,255,0.1);
+        --icon-bg: rgba(59,130,246,0.15);
+        --divider: rgba(255,255,255,0.08);
+      }
+      
+      .back-btn svg {
+        fill: #fff;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景装饰 - 卡通影视星球场景 -->
+  <div class="bg-decoration">
+    <svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <!-- 夜空渐变 -->
+        <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#0A1628"/>
+          <stop offset="50%" style="stop-color:#132044"/>
+          <stop offset="100%" style="stop-color:#1a2d5e"/>
+        </linearGradient>
+        
+        <!-- 科幻星球渐变 - 球形蓝色 -->
+        <radialGradient id="planetGrad" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" style="stop-color:#60a5fa"/>
+          <stop offset="40%" style="stop-color:#3b82f6"/>
+          <stop offset="100%" style="stop-color:#1e3a8a"/>
+        </radialGradient>
+        
+        <!-- 星球大陆渐变 -->
+        <linearGradient id="landGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#86efac"/>
+          <stop offset="50%" style="stop-color:#4ade80"/>
+          <stop offset="100%" style="stop-color:#22c55e"/>
+        </linearGradient>
+        
+        <!-- 月亮渐变 -->
+        <radialGradient id="moonGrad" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" style="stop-color:#fef3c7"/>
+          <stop offset="100%" style="stop-color:#fbbf24"/>
+        </radialGradient>
+        
+        <!-- 火焰渐变 -->
+        <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#fbbf24"/>
+          <stop offset="50%" style="stop-color:#f97316"/>
+          <stop offset="100%" style="stop-color:#ef4444"/>
+        </linearGradient>
+        
+        <!-- 飞碟光晕 -->
+        <radialGradient id="ufoGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.6"/>
+          <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0"/>
+        </radialGradient>
+        
+        <!-- 光柱渐变 -->
+        <linearGradient id="beamGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.4"/>
+          <stop offset="100%" style="stop-color:#93c5fd;stop-opacity:0"/>
+        </linearGradient>
+        
+        <!-- 城市天际线渐变 -->
+        <linearGradient id="cityGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#1e3a5f"/>
+          <stop offset="100%" style="stop-color:#0f172a"/>
+        </linearGradient>
+        
+        <!-- 胶片渐变 -->
+        <linearGradient id="filmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#fbbf24"/>
+          <stop offset="50%" style="stop-color:#f59e0b"/>
+          <stop offset="100%" style="stop-color:#d97706"/>
+        </linearGradient>
+        
+        <!-- 宇航员渐变 -->
+        <linearGradient id="astroGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#ffffff"/>
+          <stop offset="100%" style="stop-color:#e2e8f0"/>
+        </linearGradient>
+        
+        <!-- 太阳能板渐变 -->
+        <linearGradient id="solarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#64748b"/>
+          <stop offset="50%" style="stop-color:#94a3b8"/>
+          <stop offset="100%" style="stop-color:#64748b"/>
+        </linearGradient>
+        
+        <!-- 光晕滤镜 -->
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        <!-- 月亮发光滤镜 -->
+        <filter id="moonGlow">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        <!-- 星球光环渐变 -->
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#fbbf24;stop-opacity:0"/>
+          <stop offset="20%" style="stop-color:#fbbf24;stop-opacity:0.8"/>
+          <stop offset="80%" style="stop-color:#fbbf24;stop-opacity:0.8"/>
+          <stop offset="100%" style="stop-color:#fbbf24;stop-opacity:0"/>
+        </linearGradient>
+      </defs>
+      
+      <!-- 夜空背景 -->
+      <rect x="0" y="0" width="480" height="480" fill="url(#skyGrad)"/>
+      
+      <!-- 闪烁的星星 -->
+      <g fill="#fff">
+        <circle cx="30" cy="30" r="2" opacity="0.9">
+          <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="80" cy="60" r="1.5" fill="#fde68a" opacity="0.8">
+          <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="150" cy="25" r="1.8" fill="#93c5fd" opacity="0.7">
+          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="420" cy="40" r="2" opacity="0.9">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="2.2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="50" cy="150" r="1.2" fill="#c4b5fd" opacity="0.6">
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur="3.2s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="430" cy="160" r="1.3" fill="#fde68a" opacity="0.6">
+          <animate attributeName="opacity" values="0.3;0.75;0.3" dur="2.6s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="180" cy="100" r="1" fill="#93c5fd" opacity="0.5">
+          <animate attributeName="opacity" values="0.2;0.6;0.2" dur="3.5s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="350" cy="70" r="1.2" fill="#fff" opacity="0.6">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.9s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="100" cy="180" r="1" fill="#fde68a" opacity="0.5">
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2.7s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="460" cy="100" r="1.5" fill="#fff" opacity="0.7">
+          <animate attributeName="opacity" values="0.4;0.85;0.4" dur="2.4s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+      
+      <!-- 右上角流星 -->
+      <g>
+        <line x1="0" y1="0" x2="60" y2="30" stroke="url(#filmGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
+          <animate attributeName="opacity" values="0;1;0" dur="5s" repeatCount="indefinite" begin="1s"/>
+        </line>
+        <circle cx="0" cy="0" r="4" fill="#fff" filter="url(#glow)">
+          <animate attributeName="opacity" values="0;1;0" dur="5s" repeatCount="indefinite" begin="1s"/>
+          <animateTransform attributeName="transform" type="translate" values="-30,-15; 530,285" dur="5s" repeatCount="indefinite" begin="1s"/>
+        </circle>
+      </g>
+      
+      <!-- 弯弯的月亮（带笑脸和腮红，金色发光） -->
+      <g transform="translate(400, 70)" filter="url(#moonGlow)">
+        <path d="M0,0 A25,25 0 1,1 0,-50 A20,20 0 0,0 0,0" fill="url(#moonGrad)"/>
+        <path d="M-12,-20 Q-8,-15 -4,-20" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M4,-20 Q8,-15 12,-20" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M-6,-8 Q0,2 6,-8" fill="none" stroke="#92400e" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="-15" cy="-12" rx="5" ry="3" fill="#fda4af" opacity="0.6"/>
+        <ellipse cx="15" cy="-12" rx="5" ry="3" fill="#fda4af" opacity="0.6"/>
+        <circle cx="-8" cy="-18" r="1.5" fill="#fff" opacity="0.8"/>
+        <circle cx="8" cy="-18" r="1.5" fill="#fff" opacity="0.8"/>
+        <animate attributeName="opacity" values="0.9;1;0.9" dur="4s" repeatCount="indefinite"/>
+      </g>
+      
+      <!-- 装饰星星 -->
+      <g fill="#fbbf24" stroke="#1e293b" stroke-width="1.5">
+        <polygon transform="translate(120, 90)" points="0,-7 2,-2 7,-2 3,2 5,7 0,4 -5,7 -3,2 -7,-2 -2,-2">
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2.5s" repeatCount="indefinite"/>
+        </polygon>
+        <polygon transform="translate(370, 130)" points="0,-5 1.5,-1.5 5,-1.5 2.5,1.5 3.5,5 0,3 -3.5,5 -2.5,1.5 -5,-1.5 -1.5,-1.5">
+          <animate attributeName="opacity" values="0.5;0.9;0.5" dur="3s" repeatCount="indefinite"/>
+        </polygon>
+      </g>
+      
+      <!-- 左侧可爱卡通火箭 -->
+      <g transform="translate(70, 140)">
+        <animateTransform attributeName="transform" type="translate" values="70,140; 70,135; 70,140" dur="3s" repeatCount="indefinite"/>
+        
+        <!-- 白色外轮廓 -->
+        <ellipse cx="0" cy="5" rx="24" ry="52" fill="#fff" stroke="none"/>
+        
+        <!-- 火箭主体（白色机身） -->
+        <ellipse cx="0" cy="5" rx="20" ry="48" fill="#fff" stroke="#1e293b" stroke-width="2.5"/>
+        
+        <!-- 火箭头部（圆顶） -->
+        <ellipse cx="0" cy="-30" rx="18" ry="16" fill="#fff" stroke="#1e293b" stroke-width="2.5"/>
+        
+        <!-- 蓝色窗户 -->
+        <circle cx="0" cy="-28" r="10" fill="#3b82f6" stroke="#1e293b" stroke-width="2"/>
+        <ellipse cx="-3" cy="-31" rx="3" ry="2" fill="#93c5fd" opacity="0.6"/>
+        
+        <!-- 红色装饰条 -->
+        <rect x="-18" y="-5" width="36" height="8" rx="4" fill="#ef4444" stroke="#1e293b" stroke-width="2"/>
+        
+        <!-- 红色尾翼 - 左 -->
+        <path d="M-18,25 L-32,50 L-18,45 Z" fill="#ef4444" stroke="#1e293b" stroke-width="2" stroke-linejoin="round"/>
+        <!-- 红色尾翼 - 右 -->
+        <path d="M18,25 L32,50 L18,45 Z" fill="#ef4444" stroke="#1e293b" stroke-width="2" stroke-linejoin="round"/>
+        
+        <!-- 底部火焰 -->
+        <g>
+          <animate attributeName="opacity" values="0.8;1;0.8" dur="0.3s" repeatCount="indefinite"/>
+          <path d="M-10,48 Q-8,60 -6,48 Q0,70 6,48 Q8,60 10,48 Q5,55 0,48 Q-5,55 -10,48" fill="url(#flameGrad)"/>
+          <ellipse cx="0" cy="50" rx="8" ry="5" fill="#fbbf24"/>
+        </g>
+        
+        <!-- 小星星装饰 -->
+        <g transform="translate(-40, 0)">
+          <polygon points="0,-6 1.5,-2 6,-2 2.5,1 4,6 0,3 -4,6 -2.5,1 -6,-2 -1.5,-2" fill="#fbbf24" stroke="#1e293b" stroke-width="1.5"/>
+        </g>
+      </g>
+      
+      <!-- 科幻风格球形星球（不是云朵！） -->
+      <g transform="translate(240, 180)">
+        <!-- 星球白色外轮廓 -->
+        <circle cx="0" cy="0" r="72" fill="#fff"/>
+        
+        <!-- 星球主体 - 球形蓝色渐变 -->
+        <circle cx="0" cy="0" r="70" fill="url(#planetGrad)" stroke="#1e293b" stroke-width="2.5"/>
+        
+        <!-- 科幻表面纹理 - 环形线条 -->
+        <clipPath id="planetClip2"><circle cx="0" cy="0" r="69"/></clipPath>
+        <g clip-path="url(#planetClip2)" fill="none" stroke="rgba(147,197,253,0.3)" stroke-width="1.5">
+          <ellipse cx="0" cy="-20" rx="68" ry="12"/>
+          <ellipse cx="0" cy="10" rx="65" ry="10"/>
+          <ellipse cx="0" cy="35" rx="55" ry="8"/>
+          <ellipse cx="0" cy="-45" rx="40" ry="8"/>
+        </g>
+        
+        <!-- 科幻发光点 -->
+        <g fill="#60a5fa" opacity="0.8">
+          <circle cx="-35" cy="-25" r="3">
+            <animate attributeName="opacity" values="0.3;1;0.3" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="40" cy="-10" r="2.5">
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.8s" repeatCount="indefinite" begin="0.5s"/>
+          </circle>
+          <circle cx="-20" cy="30" r="2">
+            <animate attributeName="opacity" values="0.3;0.9;0.3" dur="2.2s" repeatCount="indefinite" begin="0.3s"/>
+          </circle>
+          <circle cx="25" cy="40" r="2.5">
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite" begin="0.8s"/>
+          </circle>
+          <circle cx="-45" cy="10" r="2">
+            <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+        
+        <!-- 星球高光 -->
+        <ellipse cx="-25" cy="-30" rx="18" ry="12" fill="rgba(255,255,255,0.25)" transform="rotate(-30 -25 -30)"/>
+        <ellipse cx="-35" cy="-40" rx="8" ry="5" fill="rgba(255,255,255,0.3)"/>
+        
+        <!-- 可爱表情 -->
+        <!-- 弯弯的笑眼 - 左 -->
+        <path d="M-20,-5 Q-14,2 -8,-5" fill="none" stroke="#1e3a5f" stroke-width="3" stroke-linecap="round"/>
+        <!-- 弯弯的笑眼 - 右 -->
+        <path d="M8,-5 Q14,2 20,-5" fill="none" stroke="#1e3a5f" stroke-width="3" stroke-linecap="round"/>
+        <!-- 眼睛高光 -->
+        <circle cx="-12" cy="-2" r="2.5" fill="#fff"/>
+        <circle cx="16" cy="-2" r="2.5" fill="#fff"/>
+        <!-- 微笑嘴巴 -->
+        <path d="M-10,12 Q0,24 10,12" fill="none" stroke="#1e3a5f" stroke-width="3" stroke-linecap="round"/>
+        <!-- 粉色腮红 -->
+        <ellipse cx="-28" cy="8" rx="8" ry="5" fill="#fda4af" opacity="0.7"/>
+        <ellipse cx="28" cy="8" rx="8" ry="5" fill="#fda4af" opacity="0.7"/>
+      </g>
+      
+      <!-- 金色行星环/轨道（环绕星球） -->
+      <g transform="translate(240, 180)">
+        <!-- 外层光环 -->
+        <ellipse cx="0" cy="0" rx="105" ry="28" fill="none" stroke="#fbbf24" stroke-width="5" opacity="0.6" transform="rotate(-15)">
+          <animate attributeName="opacity" values="0.4;0.75;0.4" dur="3s" repeatCount="indefinite"/>
+        </ellipse>
+        <!-- 内层光环 -->
+        <ellipse cx="0" cy="0" rx="98" ry="22" fill="none" stroke="#fde68a" stroke-width="2.5" opacity="0.5" transform="rotate(-15)"/>
+        
+        <!-- 绕轨道旋转的金色小卫星 -->
+        <g>
+          <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="12s" repeatCount="indefinite"/>
+          <!-- 卫星白色外轮廓 -->
+          <circle cx="100" cy="-22" r="12" fill="#fff"/>
+          <!-- 卫星主体 -->
+          <circle cx="100" cy="-22" r="10" fill="#fbbf24" stroke="#1e293b" stroke-width="2"/>
+          <!-- 卫星高光 -->
+          <circle cx="96" cy="-26" r="2.5" fill="#fff" opacity="0.7"/>
+          <!-- 卫星表情 -->
+          <path d="M95,-24 Q98,-22 100,-24" fill="none" stroke="#92400e" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M100,-24 Q102,-22 104,-24" fill="none" stroke="#92400e" stroke-width="1.5" stroke-linecap="round"/>
+        </g>
+      </g>
+      
+      <!-- 右侧卡通飞碟 -->
+      <g transform="translate(400, 180)">
+        <animateTransform attributeName="transform" type="translate" values="400,180; 400,176; 400,180" dur="4s" repeatCount="indefinite"/>
+        
+        <!-- 光晕效果 -->
+        <ellipse cx="0" cy="10" rx="40" ry="15" fill="url(#ufoGlow)">
+          <animate attributeName="opacity" values="0.4;0.7;0.4" dur="2s" repeatCount="indefinite"/>
+        </ellipse>
+        
+        <!-- 飞碟碟身 - 白色外轮廓 -->
+        <ellipse cx="0" cy="8" rx="42" ry="14" fill="#fff"/>
+        <!-- 飞碟碟身 -->
+        <ellipse cx="0" cy="5" rx="40" ry="12" fill="#1e3a5f" stroke="#1e293b" stroke-width="2.5"/>
+        
+        <!-- 浅蓝色圆顶 - 白色外轮廓 -->
+        <ellipse cx="0" cy="-12" rx="22" ry="22" fill="#fff"/>
+        <!-- 浅蓝色圆顶 -->
+        <ellipse cx="0" cy="-15" rx="20" ry="20" fill="#93c5fd" stroke="#1e293b" stroke-width="2.5"/>
+        <!-- 圆顶高光 -->
+        <ellipse cx="-6" cy="-22" rx="6" ry="4" fill="rgba(255,255,255,0.6)"/>
+        
+        <!-- 飞碟底部发光 -->
+        <ellipse cx="0" cy="18" rx="15" ry="6" fill="#fbbf24" opacity="0.8" filter="url(#glow)">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/>
+        </ellipse>
+        
+        <!-- 蓝色光柱 -->
+        <polygon points="-8,22 8,22 20,120 -20,120" fill="url(#beamGrad)" opacity="0.5">
+          <animate attributeName="opacity" values="0.3;0.6;0.3" dur="2s" repeatCount="indefinite"/>
+        </polygon>
+        
+        <!-- 飞碟小窗户 -->
+        <circle cx="-15" cy="2" r="4" fill="#60a5fa" stroke="#1e293b" stroke-width="1.5"/>
+        <circle cx="0" cy="5" r="4" fill="#60a5fa" stroke="#1e293b" stroke-width="1.5"/>
+        <circle cx="15" cy="2" r="4" fill="#60a5fa" stroke="#1e293b" stroke-width="1.5"/>
+      </g>
+      
+      <!-- 底部可爱的白色宇航员（y:300附近，不被卡片遮挡） -->
+      <g transform="translate(90, 320)">
+        <!-- 宇航员身体 -->
+        <ellipse cx="0" cy="20" rx="22" ry="28" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2.5"/>
+        
+        <!-- 宇航员背包 -->
+        <rect x="-15" y="15" width="30" height="25" rx="5" fill="#e2e8f0" stroke="#1e293b" stroke-width="2"/>
+        <rect x="-10" y="20" width="8" height="8" rx="2" fill="#ef4444"/>
+        <rect x="2" y="20" width="8" height="8" rx="2" fill="#3b82f6"/>
+        
+        <!-- 宇航员头盔 - 白色外轮廓 -->
+        <circle cx="0" cy="-20" r="32" fill="#fff"/>
+        <!-- 宇航员头盔 -->
+        <circle cx="0" cy="-22" r="30" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2.5"/>
+        <!-- 头盔玻璃反光 -->
+        <ellipse cx="0" cy="-22" rx="24" ry="24" fill="#bfdbfe" stroke="#1e293b" stroke-width="2" opacity="0.5"/>
+        
+        <!-- 头盔内脸部 -->
+        <circle cx="0" cy="-20" r="18" fill="#fcd9b6"/>
+        
+        <!-- 头盔内可爱表情 -->
+        <!-- 弯弯的笑眼 -->
+        <path d="M-10,-24 Q-6,-18 -2,-24" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M2,-24 Q6,-18 10,-24" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- 眼睛高光 -->
+        <circle cx="-5" cy="-22" r="1.5" fill="#fff"/>
+        <circle cx="7" cy="-22" r="1.5" fill="#fff"/>
+        <!-- 微笑 -->
+        <path d="M-5,-12 Q0,-6 5,-12" fill="none" stroke="#1e293b" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- 粉色腮红 -->
+        <ellipse cx="-14" cy="-16" rx="5" ry="3" fill="#fda4af" opacity="0.6"/>
+        <ellipse cx="14" cy="-16" rx="5" ry="3" fill="#fda4af" opacity="0.6"/>
+        
+        <!-- 宇航员手臂 - 挥手姿势 -->
+        <!-- 左臂 -->
+        <path d="M-22,10 Q-40,0 -45,-15" fill="none" stroke="url(#astroGrad)" stroke-width="12" stroke-linecap="round"/>
+        <path d="M-22,10 Q-40,0 -45,-15" fill="none" stroke="#1e293b" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+        <ellipse cx="-45" cy="-15" rx="8" ry="8" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2"/>
+        
+        <!-- 右臂 -->
+        <path d="M22,10 Q40,-5 48,-20" fill="none" stroke="url(#astroGrad)" stroke-width="12" stroke-linecap="round"/>
+        <path d="M22,10 Q40,-5 48,-20" fill="none" stroke="#1e293b" stroke-width="12" stroke-linecap="round" opacity="0.3"/>
+        <ellipse cx="48" cy="-20" rx="8" ry="8" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2"/>
+        
+        <!-- 宇航员腿部 -->
+        <ellipse cx="-10" cy="50" rx="10" ry="12" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2"/>
+        <ellipse cx="10" cy="50" rx="10" ry="12" fill="url(#astroGrad)" stroke="#1e293b" stroke-width="2"/>
+        
+        <!-- 腿部装饰 -->
+        <rect x="-16" y="45" width="12" height="6" rx="3" fill="#3b82f6"/>
+        <rect x="4" y="45" width="12" height="6" rx="3" fill="#3b82f6"/>
+      </g>
+      
+      <!-- 银色小卫星（带太阳能板，在右侧） -->
+      <g transform="translate(380, 350)">
+        <!-- 卫星主体 -->
+        <rect x="-12" y="-8" width="24" height="16" rx="4" fill="url(#solarGrad)" stroke="#1e293b" stroke-width="2"/>
+        <!-- 太阳能板 - 左 -->
+        <rect x="-40" y="-5" width="25" height="10" rx="2" fill="#3b82f6" stroke="#1e293b" stroke-width="2"/>
+        <line x1="-35" y1="-5" x2="-35" y2="5" stroke="#1e293b" stroke-width="1"/>
+        <line x1="-28" y1="-5" x2="-28" y2="5" stroke="#1e293b" stroke-width="1"/>
+        <!-- 太阳能板 - 右 -->
+        <rect x="15" y="-5" width="25" height="10" rx="2" fill="#3b82f6" stroke="#1e293b" stroke-width="2"/>
+        <line x1="20" y1="-5" x2="20" y2="5" stroke="#1e293b" stroke-width="1"/>
+        <line x1="27" y1="-5" x2="27" y2="5" stroke="#1e293b" stroke-width="1"/>
+        <!-- 天线 -->
+        <line x1="0" y1="-8" x2="0" y2="-18" stroke="#1e293b" stroke-width="2"/>
+        <circle cx="0" cy="-20" r="3" fill="#ef4444" stroke="#1e293b" stroke-width="1.5"/>
+        <!-- 卫星小眼睛 -->
+        <circle cx="-4" cy="0" r="2" fill="#1e293b"/>
+        <circle cx="4" cy="0" r="2" fill="#1e293b"/>
+        <!-- 小微笑 -->
+        <path d="M-3,5 Q0,8 3,5" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+      
+      <!-- 城市天际线剪影（最底部 y:400-480） -->
+      <g transform="translate(0, 410)">
+        <!-- 背景建筑 -->
+        <rect x="0" y="-25" width="28" height="25" fill="#1e3a5f"/>
+        <rect x="32" y="-45" width="22" height="45" fill="#162032"/>
+        <rect x="58" y="-22" width="32" height="22" fill="#1e3a5f"/>
+        <rect x="95" y="-55" width="20" height="55" fill="#0f172a"/>
+        <rect x="120" y="-32" width="24" height="32" fill="#162032"/>
+        <rect x="150" y="-48" width="16" height="48" fill="#1e3a5f"/>
+        
+        <!-- 中景建筑 -->
+        <rect x="175" y="-38" width="28" height="38" fill="#0f172a"/>
+        <rect x="210" y="-58" width="22" height="58" fill="#162032"/>
+        <rect x="240" y="-35" width="26" height="35" fill="#0f172a"/>
+        <rect x="275" y="-45" width="20" height="45" fill="#1e3a5f"/>
+        <rect x="305" y="-30" width="24" height="30" fill="#0f172a"/>
+        <rect x="340" y="-42" width="22" height="42" fill="#162032"/>
+        <rect x="372" y="-28" width="28" height="28" fill="#0f172a"/>
+        <rect x="408" y="-22" width="30" height="22" fill="#1e3a5f"/>
+        <rect x="445" y="-18" width="35" height="18" fill="#0f172a"/>
+        
+        <!-- 窗户灯光 -->
+        <rect x="180" y="-30" width="4" height="5" fill="#fbbf24" opacity="0.8">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.5s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="195" y="-25" width="4" height="5" fill="#fbbf24" opacity="0.6">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="220" y="-48" width="4" height="5" fill="#93c5fd" opacity="0.7">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.8s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="250" y="-26" width="4" height="5" fill="#fbbf24" opacity="0.5">
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2.2s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="280" y="-38" width="4" height="5" fill="#93c5fd" opacity="0.8">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="1.6s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="312" y="-22" width="4" height="5" fill="#fbbf24" opacity="0.6">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="348" y="-34" width="4" height="5" fill="#93c5fd" opacity="0.7">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="1.9s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="380" y="-20" width="4" height="5" fill="#fbbf24" opacity="0.5">
+          <animate attributeName="opacity" values="0.2;0.7;0.2" dur="2.1s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="415" y="-15" width="4" height="5" fill="#93c5fd" opacity="0.6">
+          <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.3s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="452" y="-12" width="4" height="5" fill="#fbbf24" opacity="0.7">
+          <animate attributeName="opacity" values="0.4;0.85;0.4" dur="1.7s" repeatCount="indefinite"/>
+        </rect>
+      </g>
+      
+      <!-- 装饰性电影胶片片段 -->
+      <g transform="translate(30, 320)" opacity="0.8">
+        <rect x="0" y="0" width="45" height="16" fill="#1e293b" rx="3"/>
+        <circle cx="8" cy="8" r="3" fill="url(#filmGrad)"/>
+        <circle cx="17" cy="8" r="3" fill="url(#filmGrad)"/>
+        <circle cx="26" cy="8" r="3" fill="url(#filmGrad)"/>
+        <circle cx="35" cy="8" r="3" fill="url(#filmGrad)"/>
+      </g>
+      
+      <g transform="translate(420, 340)" opacity="0.7">
+        <rect x="0" y="0" width="40" height="14" fill="#1e293b" rx="3"/>
+        <circle cx="7" cy="7" r="2.5" fill="#f59e0b"/>
+        <circle cx="15" cy="7" r="2.5" fill="#f59e0b"/>
+        <circle cx="23" cy="7" r="2.5" fill="#f59e0b"/>
+        <circle cx="31" cy="7" r="2.5" fill="#f59e0b"/>
+      </g>
+    </svg>
+  </div>
+  
+  <!-- 返回按钮 -->
+  <button class="back-btn" onclick="hideAboutPage()" aria-label="返回">
+    <svg viewBox="0 0 24 24">
+      <path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+    </svg>
+  </button>
+  
+  <div class="container">
+    <h1 class="page-title" style="display:none">关于云梢</h1>
+    
+    <!-- Logo 卡片 - 简洁白色卡片 -->
+    <div class="logo-card">
+      <div class="logo-wrapper">
+        <div class="logo-glow"></div>
+        <div class="logo-cloud">
+          <svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="cloudGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#3B82F6"/>
+                <stop offset="50%" style="stop-color:#60A5FA"/>
+                <stop offset="100%" style="stop-color:#93C5FD"/>
+              </linearGradient>
+              <linearGradient id="shadowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#2563EB;stop-opacity:0.3"/>
+                <stop offset="100%" style="stop-color:#1D4ED8;stop-opacity:0"/>
+              </linearGradient>
+            </defs>
+            <!-- 云朵主体 -->
+            <ellipse cx="60" cy="55" rx="45" ry="30" fill="url(#cloudGrad)"/>
+            <!-- 云朵顶部 -->
+            <circle cx="40" cy="40" r="22" fill="url(#cloudGrad)"/>
+            <circle cx="60" cy="32" r="26" fill="url(#cloudGrad)"/>
+            <circle cx="82" cy="42" r="18" fill="url(#cloudGrad)"/>
+            <!-- 高光 -->
+            <ellipse cx="50" cy="35" rx="12" ry="6" fill="rgba(255,255,255,0.3)" transform="rotate(-15 50 35)"/>
+          </svg>
+        </div>
+      </div>
+      <h2 class="app-name">云梢影视</h2>
+      <span class="version-tag">v3.9.0</span>
+      <p class="app-desc">一款轻量级影视聚合播放应用，多源聚合搜索、智能推荐、直播频道、跨平台支持</p>
+    </div>
+    
+    <!-- 核心特性 -->
+    <div class="features-card">
+      <h3 class="section-title">核心特性</h3>
+      <div class="features-grid">
+        <div class="feature-item" style="animation-delay: 0.1s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+          </div>
+          <span class="feature-name">多源聚合</span>
+        </div>
+        <div class="feature-item" style="animation-delay: 0.15s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </div>
+          <span class="feature-name">智能搜索</span>
+        </div>
+        <div class="feature-item" style="animation-delay: 0.2s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12zM9 10l7 4-7 4z"/></svg>
+          </div>
+          <span class="feature-name">直播频道</span>
+        </div>
+        <div class="feature-item" style="animation-delay: 0.25s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+          </div>
+          <span class="feature-name">跨平台</span>
+        </div>
+        <div class="feature-item" style="animation-delay: 0.3s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>
+          </div>
+          <span class="feature-name">主题切换</span>
+        </div>
+        <div class="feature-item" style="animation-delay: 0.35s">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          </div>
+          <span class="feature-name">历史追剧</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 技术信息 -->
+    <div class="tech-card">
+      <h3 class="section-title">技术信息</h3>
+      <div class="tech-info">
+        <div class="tech-item">
+          <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+          <span>HTML5</span> + <span>Go</span> 构建
+        </div>
+        <div class="tech-item">
+          <svg viewBox="0 0 24 24"><path d="M17.6 9.48l1.84-3.18c.16-.28.24-.6.24-.96 0-1.1-.9-2-2-2-.34 0-.68.08-.99.25l-1.86 3.18c-.65.25-.83 1.13-.4 1.61.25.28.63.36.98.18l1.19-.61zM6.4 9.48l-1.84-3.18c-.16-.28-.24-.6-.24-.96 0-1.1.9-2 2-2 .34 0 .68.08.99.25l1.86 3.18c.65.25.83 1.13.4 1.61-.25.28-.63.36-.98.18l-1.19-.61zM12 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm3.5 4c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5.67-1.5 1.5-1.5zM12 14c-2.21 0-4-1.79-4-4h8c0 2.21-1.79 4-4 4z"/></svg>
+          <span>Android</span> / <span>Windows</span> / <span>Linux</span>
+        </div>
+        <div class="tech-item">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <span>持续更新中</span> · 感谢您的支持
+        </div>
+      </div>
+    </div>
+    
+    <!-- 联系/开源 -->
+    <div class="contact-card">
+      <h3 class="section-title">联系我们</h3>
+      <div class="contact-links">
+        <div class="contact-item" onclick="window.open('https://github.com/yunshao', '_blank')">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </div>
+          <div class="contact-text">
+            <div class="contact-label">开源项目</div>
+            <div class="contact-value">访问 GitHub 仓库</div>
+          </div>
+          <svg class="contact-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </div>
+        <div class="contact-item" onclick="window.open('mailto:1776367314@qq.com')">
+          <div class="contact-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          </div>
+          <div class="contact-text">
+            <div class="contact-label">意见反馈</div>
+            <div class="contact-value">1776367314@qq.com</div>
+          </div>
+          <svg class="contact-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 免责声明 -->
+    <div class="disclaimer-card">
+      <h3 class="section-title">免责声明</h3>
+      <p class="disclaimer-text">本应用仅提供搜索聚合服务，不存储任何视频内容，所有视频版权归原作者所有。如有任何版权问题，请联系相应内容提供商删除。</p>
+    </div>
+    
+    <!-- 版权信息 -->
+    <div class="copyright">
+      <p class="copyright-text">© 2026 云梢影视 All Rights Reserved</p>
+      <p class="copyright-brand">☁️ 云梢影视</p>
+    </div>
+  </div>
+  
+  <script>
+    (function(){
+      var t=localStorage.getItem('ys_theme');
+      if(t==='dark') document.body.classList.add('theme-dark');
+      else if(t==='light') document.body.classList.remove('theme-dark');
+      else if(window.matchMedia('(prefers-color-scheme:dark)').matches) document.body.classList.add('theme-dark');
+    })();
+    // 特性列表交错显示动画
+    document.addEventListener('DOMContentLoaded', function() {
+      const features = document.querySelectorAll('.feature-item');
+      features.forEach((item, index) => {
+        setTimeout(() => {
+          item.classList.add('show');
+        }, 400 + (index * 80));
+      });
+    });
+    
+    // 深色模式检测
+    (function() {
+      // 检测系统主题偏好
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      // 检测 body 上的主题类名
+      const bodyHasDarkClass = document.body.classList.contains('theme-dark');
+      
+      // 如果系统是深色或 body 有 theme-dark 类，添加对应样式
+      if (prefersDark || bodyHasDarkClass) {
+        // CSS 已经在 @media (prefers-color-scheme: dark) 中处理
+        // 这里可以添加额外的 JS 处理逻辑
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.yxq.yunshao'
+    compileSdk 33
+    defaultConfig {
+        applicationId "com.yxq.yunshao3"
+        minSdk 21
+        targetSdk 33
+        versionCode 52
+        versionName "3.17.0"
+    }
+    signingConfigs {
+        debug {
+            storeFile file('/tmp/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            storeFile file('../../capacitor-app/yunshao-release.keystore')
+            storePassword 'yunshao123'
+            keyAlias 'yunshao'
+            keyPassword 'yunshao123'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    lint {
+        disable 'DuplicatePlatformClasses'
+    }
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt', 'META-INF/NOTICE', 'META-INF/NOTICE.txt']
+        }
+    }
+}
+repositories {
+    google()
+    mavenCentral()
+}
+dependencies {
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    implementation 'org.json:json:20231013'
+}
