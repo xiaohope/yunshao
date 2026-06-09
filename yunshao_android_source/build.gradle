@@ -3,6 +3,10 @@ buildscript {
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/central' }
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        // 官方仓库 fallback（阿里云镜像不稳定时使用）
+        google()
+        mavenCentral()
+        gradlePluginPortal()
     }
 }
 plugins {
@@ -13,5 +17,9 @@ allprojects {
         maven { url 'https://maven.aliyun.com/repository/google' }
         maven { url 'https://maven.aliyun.com/repository/central' }
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        // 官方仓库 fallback
+        google()
+        mavenCentral()
+        gradlePluginPortal()
     }
 }
