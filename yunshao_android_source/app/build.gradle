@@ -12,23 +12,14 @@ android {
         versionName "3.17.0"
     }
     signingConfigs {
-        debug {
-            storeFile file('/tmp/debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
-        }
         release {
-            storeFile file('../../capacitor-app/yunshao-release.keystore')
+            storeFile file('../yunshao-release.keystore')
             storePassword 'yunshao123'
             keyAlias 'yunshao'
             keyPassword 'yunshao123'
         }
     }
     buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

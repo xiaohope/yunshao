@@ -36,11 +36,6 @@ jobs:
               -dname "CN=YunShao, OU=Dev, O=YunShao, L=Beijing, ST=Beijing, C=CN"
           fi
 
-      - name: Fix keystore path in build.gradle
-        run: |
-          sed -i "s|file('../../capacitor-app/yunshao-release.keystore')|file('yunshao-release.keystore')|g" \
-            yunshao_android_source/app/build.gradle
-
       - name: Build debug APK
         run: |
           cd yunshao_android_source
