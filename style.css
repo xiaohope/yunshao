@@ -1574,7 +1574,21 @@ body.theme-dark .sri-tag-type { background: rgba(156,163,175,0.12); color: #9CA3
 
 /* ========== 底部固定播放条 ========== */
 .mini-player-bar {
-  display: none !important;
+  display: none;
+  position: fixed;
+  bottom: var(--nav-height);
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  padding: 8px 16px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  align-items: center;
+  gap: 12px;
+  z-index: 99;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideUp {
@@ -2800,187 +2814,7 @@ body.theme-dark .sri-tag-type { background: rgba(156,163,175,0.12); color: #9CA3
   transform: scale(0.96);
 }
 
-/* 采集源管理卡片样式增强 */
-.src-section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  padding: 16px 16px 12px;
-}
 
-.src-card {
-  margin: 0 16px 12px;
-  background: var(--bg-card);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--card-shadow);
-}
-
-.src-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-}
-
-.src-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--bg-tag);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.src-card-icon.on {
-  background: rgba(34, 197, 94, 0.15);
-}
-
-.src-card-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.src-card-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-}
-
-.src-card-url {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.src-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--border-light);
-}
-
-.src-action-btn {
-  padding: 6px 14px;
-  border-radius: 16px;
-  font-size: 12px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.src-action-btn.edit {
-  background: var(--accent-bg);
-  color: var(--accent);
-}
-
-.src-action-btn.del {
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
-}
-
-.src-action-btn.add-template {
-  background: var(--accent);
-  color: #fff;
-}
-
-.src-card-template {
-  cursor: pointer;
-  border: 2px dashed var(--border-light);
-}
-
-.src-card-template:active {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-}
-
-/* source-modal-dialog 样式调整 */
-.source-modal-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 24px 20px 16px;
-  min-width: 300px;
-  max-width: 90vw;
-  z-index: 9999;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-.src-modal-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.src-modal-field {
-  margin-bottom: 16px;
-}
-
-.src-modal-field label {
-  display: block;
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-
-.src-modal-input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.src-modal-input:focus {
-  border-color: var(--accent);
-}
-
-.src-modal-btns {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.src-modal-cancel, .src-modal-ok {
-  flex: 1;
-  padding: 12px 0;
-  border-radius: 22px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.src-modal-cancel {
-  background: var(--bg-tag);
-  color: var(--text-secondary);
-}
-
-.src-modal-ok {
-  background: var(--accent);
-  color: #fff;
-}
-
-.src-modal-cancel:active { opacity: 0.7; }
-.src-modal-ok:active { opacity: 0.8; transform: scale(0.98); }
 
 /* 搜索进度 */
 .search-progress { font-size:12px; color:var(--text-tertiary); margin-top:4px; }
@@ -3028,64 +2862,7 @@ body.theme-dark .sri-tag-type { background: rgba(156,163,175,0.12); color: #9CA3
 .top-bar-actions .mgmt-toggle-btn{position:static;transform:none;}
 
 
-/* === 详情页样式 === */
-/* 详情页样式 */
-
-
-
-.video-card-rating { 
-  position:absolute; 
-  top:4px; 
-  right:4px; 
-  background: linear-gradient(135deg, #FF9800, #FF5722);
-  color:#fff; 
-  font-size:10px; 
-  font-weight:700; 
-  padding:2px 5px; 
-  border-radius:4px;
-  box-shadow: 0 2px 6px rgba(255,152,0,0.4);
-}
-
-
-
-.cat-card-rating { 
-  position:absolute; 
-  top:4px; 
-  right:4px; 
-  background: linear-gradient(135deg, #FF9800, #FF5722);
-  color:#fff; 
-  font-size:10px; 
-  font-weight:700; 
-  padding:2px 5px; 
-  border-radius:4px;
-  box-shadow: 0 2px 6px rgba(255,152,0,0.4);
-}
-
-
-
-.detail-info { padding:14px 16px; }
-
-
-
-/* 源切换Tab */
-.source-tabs { padding: 0 16px 12px; }
-
-
-.source-tabs-scroll { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-
-
-.source-tabs-scroll::-webkit-scrollbar { display: none; }
-
-
-.ep-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px,1fr)); gap:8px; }
-
-
-
-.detail-actions { 
-  display:flex; 
-  gap:10px; 
-  padding:12px 16px 24px; 
-}
+/* ========== Detail Cards (评分/简介/导演/演员) ========== */
 
 
 
@@ -3197,16 +2974,6 @@ body.theme-dark .detail-card {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-
-.cat-list-meta-item.rating { color: #FF9800; font-weight: 600; }
-
-
-.cat-grid-meta .rating { color: #FF9800; }
-
-
-.banner-rating { position:absolute; top:8px; right:8px; background:rgba(255,152,0,0.9); color:#fff; font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px; }
-
 
 
 /* ========== Detail Info Page (影视详情页) ========== */

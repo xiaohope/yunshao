@@ -513,7 +513,7 @@ async function loadShortDramas() {
   else el.innerHTML='<div class="loading-placeholder error">暂无</div>';
 }
 
-const noImg="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 60%22><rect fill=%22%232a2a3e%22 width=%2240%22 height=%2260%22 rx=%224%22/><path d=%22M16 20h8v4h-8zm-2 6h12v18l-6-4-6 4z%22 fill=%22%23444%22/><text x=%2220%22 y=%2256%22 fill=%22%23555%22 font-size=%226%22 text-anchor=%22middle%22>暂无封面</text></svg>";
+const noImg="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 60'%3E%3Crect fill='%232a2a3e' width='40' height='60' rx='4'/%3E%3Cpath d='M16 20h8v4h-8zm-2 6h12v18l-6-4-6 4z' fill='%23444'/%3E%3Ctext x='20' y='56' fill='%23555' font-size='6' text-anchor='middle'%3E暂无封面%3C/text%3E%3C/svg%3E";
 
 // 全局视频数据缓存（避免JSON嵌入HTML的编码问题）
 window._vodData = window._vodData || {};
@@ -945,17 +945,8 @@ async function loadCategoryData() {
 }
 function loadMoreCategory(){if(categoryState.hasMore&&!categoryState.loading){categoryState.page++;loadCategoryData();}}
 
-// 滚动加载：监听每个首页Tab面板的滚动
-Object.entries(tabPanelMap).forEach(([tabName,panelId])=>{
-  const panel=document.getElementById(panelId);
-  if(!panel) return;
-  panel.addEventListener('scroll',function(){
-    const typeId=tabTypeMap[tabName];
-    if(this.scrollTop+this.clientHeight>=this.scrollHeight-200){
-      if(typeId&&catTabStates[typeId]&&catTabStates[typeId].hasMore&&!catTabStates[typeId].loading) loadMoreHomeCat(typeId);
-    }
-  });
-});
+// 滚动加载：监听每个首页Tab面板的滚动（已由 setupHomeScrollLoad 统一管理，这里移除避免重复绑定）
+// 分类页滚动加载：已由 setupCatPageScrollLoad 统一管理
 document.getElementById('categoryContent')?.addEventListener('scroll',function(){
   if(this.scrollTop+this.clientHeight>=this.scrollHeight-200){
     if(categoryState.hasMore&&!categoryState.loading) loadMoreCategory();
@@ -2325,10 +2316,19 @@ function showAboutPage(){
       styleWrap.className='about-styles';
       doc.querySelectorAll('style').forEach(function(s){styleWrap.appendChild(s.cloneNode(true));});
       c.insertBefore(styleWrap,c.firstChild);
-      // 主题检测
+      // 主题检测 - 安全方式读取
       doc.querySelectorAll('script').forEach(function(s){
         if(s.textContent.indexOf('ys_theme')>-1){
-          try{eval(s.textContent);}catch(e){}
+          try{
+            // 只提取 localStorage 操作，不执行任意代码
+            var themeMatch = s.textContent.match(/localStorage\.getItem\(['"]ys_theme['"]\)/);
+            if(themeMatch){
+              var theme = localStorage.getItem('ys_theme');
+              if(theme==='dark' && !document.body.classList.contains('theme-dark')){
+                document.body.classList.add('theme-dark');
+              }
+            }
+          }catch(e){}
         }
       });
       // 触发特性动画
@@ -2370,32 +2370,34 @@ function applyLayout(mode){
   if(mode!=='auto'){
     document.body.classList.add('layout-'+mode);
   }
-  // 手动布局时，通过JS强制设置viewport，确保CSS媒体查询生效
+  // 同步 is-widescreen class（与 index.html 的检测保持一致）
+  var isCurrentlyWide = window.innerWidth >= 768;
+  if(mode==='wide'){
+    document.body.classList.add('is-widescreen');
+  } else if(mode==='narrow'){
+    document.body.classList.remove('is-widescreen');
+  } else {
+    // auto 模式：根据实际宽度决定
+    if(isCurrentlyWide){
+      document.body.classList.add('is-widescreen');
+    } else {
+      document.body.classList.remove('is-widescreen');
+    }
+  }
+  // 更新viewport
   updateViewport(mode);
 }
 // 根据布局模式和物理屏幕尺寸动态设置viewport
 function updateViewport(mode){
-  // 优先用Java注入的物理像素，否则回退到screen
-  var sw = window.__screenW || screen.width * (window.devicePixelRatio||1);
-  var sh = window.__screenH || screen.height * (window.devicePixelRatio||1);
-  var isWideScreen = Math.max(sw,sh) >= 900; // 物理像素宽边>=900视为平板以上
   var viewport = document.querySelector('meta[name=viewport]');
   if(!viewport){
     viewport = document.createElement('meta');
     viewport.name = 'viewport';
     document.head.appendChild(viewport);
   }
-  if(mode==='wide' && isWideScreen){
-    // 横屏模式：强制viewport为屏幕实际宽度（dp），让CSS媒体查询按真实尺寸触发
-    var wideDp = Math.max(sw,sh) / (window.devicePixelRatio||1);
-    viewport.content = 'width='+Math.round(wideDp)+', initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-  } else if(mode==='narrow'){
-    // 竖屏模式：固定窄viewport
-    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-  } else {
-    // 自动模式：默认
-    viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-  }
+  // 统一用 width=device-width，让CSS媒体查询自然生效
+  // 不强制设置具体像素宽度，避免破坏CSS媒体查询条件
+  viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
 }
 // 初始化布局
 (function(){
@@ -2405,11 +2407,18 @@ function updateViewport(mode){
   var ml=document.getElementById('menuLayout');
   if(ml)ml.textContent=labels[mode];
 })();
-// 监听屏幕旋转，自动模式时重新应用
+// 监听屏幕旋转，自动模式时重新应用布局
 window.addEventListener('orientationchange', function(){
   var mode=localStorage.getItem('ys_layout')||'auto';
-  if(mode==='auto') applyLayout('auto');
+  applyLayout(mode);
 });
+// 监听来自 index.html 的宽屏状态变化通知
+window.__onWidescreenChange = function(isWide){
+  var mode=localStorage.getItem('ys_layout')||'auto';
+  if(mode==='auto'){
+    applyLayout('auto');
+  }
+};
 
 // ==================== 事件绑定 ====================
 document.getElementById('searchInput')?.addEventListener('click',()=>openSearchPage());
@@ -2677,13 +2686,13 @@ async function doHomeTabRefresh(tabName,panel,indicator){
     homeDataCache=null;
     await loadHomeData();
     Object.keys(catTabStates).forEach(k=>{
-      catTabStates[k]={page:1,loading:false,hasMore:true,loaded:false};
+      Object.assign(catTabStates[k], {page:1,loading:false,hasMore:true,loaded:false});
       const grid=document.getElementById('catGrid_'+k);
       if(grid) grid.innerHTML='';
     });
   } else {
     const typeId=tabTypeMap[tabName];
-    catTabStates[typeId]={page:1,loading:false,hasMore:true,loaded:false};
+    Object.assign(catTabStates[typeId], {page:1,loading:false,hasMore:true,loaded:false});
     const grid=document.getElementById('catGrid_'+typeId);
     if(grid) grid.innerHTML='';
     await loadHomeCatData(typeId, true);
@@ -2729,7 +2738,7 @@ function initCatPagePullRefresh(){
 }
 
 async function doCatPageRefresh(typeId,indicator){
-  catPageTabStates[typeId]={page:1,loading:false,hasMore:true,loaded:false,allData:[]};
+  Object.assign(catPageTabStates[typeId], {page:1,loading:false,hasMore:true,loaded:false,allData:[]});
   const grid=document.getElementById('catPageList_'+typeId);
   if(grid) grid.innerHTML='';
   const panel=document.getElementById(catPagePanelMap[typeId]);

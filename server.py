@@ -12,6 +12,7 @@ import sys
 import io
 import time
 import re
+import threading
 
 PORT = 8989
 
@@ -27,6 +28,7 @@ DEFAULT_SOURCES = [
 ]
 
 custom_sources = []
+custom_sources_lock = threading.Lock()
 home_cache = None
 home_cache_time = 0
 HOME_CACHE_TTL = 300  # 5分钟
@@ -40,7 +42,10 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         if self.path == '/api/sources/sync':
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length <= 0 or content_length > 10 * 1024 * 1024:
+                self._json_response({"error": "invalid request"}, 400)
+                return
             body = self.rfile.read(content_length).decode('utf-8')
             self.handle_sources_sync(body)
         else:
@@ -53,7 +58,9 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
                 # 去重合并：按 api_url 去重，custom_sources 优先
                 seen_urls = set()
                 merged = []
-                for src in custom_sources + DEFAULT_SOURCES:
+                with custom_sources_lock:
+                    combined = list(custom_sources) + DEFAULT_SOURCES
+                for src in combined:
                     url = src.get('api_url', src.get('url', ''))
                     if url and url not in seen_urls:
                         seen_urls.add(url)
@@ -81,7 +88,8 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
             self._json_response(json.loads(home_cache))
             return
 
-        all_sources = DEFAULT_SOURCES + custom_sources
+        with custom_sources_lock:
+            all_sources = DEFAULT_SOURCES + list(custom_sources)
         all_items = []
         seen = set()
 
@@ -125,19 +133,20 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
         type_id = int(qs.get('type', ['0'])[0])
         smart = qs.get('smart', ['0'])[0]
 
-        all_sources = DEFAULT_SOURCES + custom_sources
+        with custom_sources_lock:
+            all_sources = DEFAULT_SOURCES + list(custom_sources)
         all_items = []
         seen = set()
         lock = threading.Lock()
 
-        def fetch_source(url, src_name):
+        def fetch_source(fetch_url, src_name):
             local_items = []
             try:
-                data = self._fetch_url(url, timeout=6)
+                data = self._fetch_url(fetch_url, timeout=6)
                 if data and 'list' in data:
                     for item in data['list']:
                         key = f"{item.get('vod_name','')}_{item.get('vod_id','')}"
-                        item['source_url'] = api_url
+                        item['source_url'] = fetch_url
                         item['source_name'] = src_name
                         local_items.append((key, item))
             except Exception:
@@ -237,8 +246,9 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
                     if 'api_url' not in src and 'url' in src:
                         src['api_url'] = src['url']
                     filtered.append(src)
-            custom_sources = filtered
-            self._json_response({"ok": True, "count": len(custom_sources)})
+            with custom_sources_lock:
+                custom_sources = filtered
+            self._json_response({"ok": True, "count": len(filtered)})
         except Exception as e:
             self._json_response({"error": str(e)}, 400)
 

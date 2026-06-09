@@ -18,30 +18,56 @@
   var isTV=/Android\s+TV|Leanback|AFT|SMART-TV|NetCast|WebOS/.test(ua);
   var isWide=isDesktop||w>=768;
   
-  if(isWide){
-    // 加载横版样式
-    var link=document.createElement('link');
-    link.rel='stylesheet';
-    link.href='widescreen.css';
-    document.head.appendChild(link);
-    
-    // 标记设备类型
-    if(isDesktop){
-      document.documentElement.setAttribute('data-device','desktop');
+  // 应用横版布局：class + CSS加载 + orientation监听
+  function applyWidescreen(enabled){
+    if(enabled){
+      document.body.classList.add('is-widescreen');
+      // 加载横版样式（如果未加载）
+      if(!document.querySelector('link[href="widescreen.css"]')){
+        var link=document.createElement('link');
+        link.rel='stylesheet';
+        link.href='widescreen.css';
+        document.head.appendChild(link);
+      }
+      // 标记设备类型
+      if(isDesktop){
+        document.documentElement.setAttribute('data-device','desktop');
+      } else {
+        document.documentElement.setAttribute('data-device',isTV?'tv':hasTouch?'tablet':'desktop');
+      }
+      // 电视/桌面加载焦点管理
+      if(isTV||!hasTouch||isDesktop){
+        var alreadyLoaded=document.querySelector('script[src="focus.js"]');
+        if(!alreadyLoaded){
+          var s=document.createElement('script');
+          s.src='focus.js';
+          s.onload=function(){if(window.FocusManager)FocusManager.init();};
+          document.head.appendChild(s);
+        }
+      }
     } else {
-      document.documentElement.setAttribute('data-device',isTV?'tv':hasTouch?'tablet':'desktop');
+      document.body.classList.remove('is-widescreen');
+      document.documentElement.setAttribute('data-device','mobile');
     }
-    
-    // 电视/桌面加载焦点管理
-    if(isTV||!hasTouch||isDesktop){
-      var s=document.createElement('script');
-      s.src='focus.js';
-      s.onload=function(){if(window.FocusManager)FocusManager.init();};
-      document.head.appendChild(s);
-    }
-  } else {
-    document.documentElement.setAttribute('data-device','mobile');
   }
+  
+  // 初始应用
+  applyWidescreen(isWide);
+  
+  // 监听窗口变化（处理旋转和resize）
+  var resizeTimer;
+  window.addEventListener('resize',function(){
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(function(){
+      var currentWide=window.innerWidth>=768;
+      var hasClass=document.body.classList.contains('is-widescreen');
+      if(currentWide!==hasClass){
+        applyWidescreen(currentWide);
+        // 通知JS层重新评估布局
+        if(window.__onWidescreenChange) window.__onWidescreenChange(currentWide);
+      }
+    },300);
+  });
 })();
 </script>
 </head>
