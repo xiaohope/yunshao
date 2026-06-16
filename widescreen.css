@@ -1,0 +1,1119 @@
+/* ============================================
+   云梢影视 横版布局样式表 v3.0
+   用 is-widescreen class 统一控制，不依赖CSS媒体查询
+   ============================================ */
+
+/* 浅色主题：html背景与body一致 */
+@media (min-width: 768px), (orientation: landscape) and (min-width: 640px) {
+  html {
+    background: var(--bg-primary, #F0F2F7) !important;
+  }
+}
+html.is-ws-bg {
+  background: var(--bg-primary, #F0F2F7) !important;
+}
+
+/* ============================================
+   核心横版布局：body.is-widescreen 统一控制
+   同时适用于：CSS媒体查询触发 / 手动横屏 / 电脑模式
+   ============================================ */
+body.is-widescreen .bottom-nav,
+body.is-widescreen .mobile-nav {
+  display: none !important;
+}
+body.is-widescreen .side-nav {
+  display: flex !important;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  background: #ffffff;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  z-index: 100;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+  transition: width 0.2s;
+  overflow: hidden;
+}
+/* hover展开时浮动覆盖，不影响内容区 */
+body.is-widescreen .side-nav:hover {
+  width: 180px;
+  box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+}
+body.is-widescreen .page {
+  display: none !important;
+  background: var(--bg-primary, #F0F2F7) !important;
+}
+body.is-widescreen .page.active {
+  display: flex !important;
+  width: 100% !important;
+  padding-left: 72px !important;
+  margin-left: 0 !important;
+  background: var(--bg-primary, #F0F2F7) !important;
+}
+body.is-widescreen .main-content {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+body.is-widescreen #homePage.active {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh;
+  overflow: hidden;
+}
+body.is-widescreen #homePage .main-content {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* layout-narrow 强制竖屏：即使is-widescreen也恢复底部导航 */
+body.layout-narrow .side-nav {
+  display: none !important;
+}
+body.layout-narrow .bottom-nav,
+body.layout-narrow .mobile-nav {
+  display: flex !important;
+}
+body.layout-narrow .page.active {
+  padding-left: 0 !important;
+}
+
+/* 手机窄屏（物理<900px）上layout-wide不生效 */
+body.layout-wide:not(.is-widescreen) .side-nav {
+  display: none !important;
+}
+body.layout-wide:not(.is-widescreen) .bottom-nav,
+body.layout-wide:not(.is-widescreen) .mobile-nav {
+  display: flex !important;
+}
+body.layout-wide:not(.is-widescreen) .page.active {
+  padding-left: 0 !important;
+}
+body.layout-wide.layout-dark .side-nav,
+body.theme-dark.layout-wide .side-nav {
+  background: #1e293b;
+}
+/* 手动竖屏布局（layout-narrow）强制竖屏 */
+body.layout-narrow .side-nav {
+  display: none !important;
+}
+body.layout-narrow .bottom-nav,
+body.layout-narrow .mobile-nav {
+  display: flex !important;
+}
+body.layout-narrow .page-with-nav {
+  margin-left: 0;
+}
+body.layout-narrow .page.active {
+  padding-left: 0 !important;
+}
+
+/* ============================================
+   问题9：主题切换 - 浅色为默认
+   侧边栏默认浅色，文字深色
+   ============================================ */
+@media (min-width: 768px), (orientation: landscape) and (min-width: 640px) {
+  /* 隐藏底部导航，显示侧边栏 */
+  .bottom-nav,
+  .mobile-nav {
+    display: none !important;
+  }
+
+  /* 侧边栏导航 - 浅色默认 */
+  .side-nav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 72px;
+    background: #ffffff;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    z-index: 1000;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.08);
+    transition: width 0.3s ease;
+    border-right: 1px solid #e2e8f0;
+  }
+
+  .side-nav:hover {
+    width: 180px;
+  }
+
+  .side-nav-logo {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: transparent;
+    overflow: visible !important;
+  }
+
+  .side-nav-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .side-nav-items {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 0 8px;
+  }
+
+  .side-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #64748B;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .side-nav-item:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: #3B82F6;
+  }
+
+  .side-nav-item.active {
+    background: #3B82F6;
+    color: #ffffff;
+  }
+
+  .side-nav-item .nav-icon {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .side-nav-item .nav-text {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .side-nav:hover .side-nav-item .nav-text {
+    opacity: 1;
+  }
+
+  .side-nav-item .badge {
+    margin-left: auto;
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .side-nav:hover .side-nav-item .badge {
+    opacity: 1;
+  }
+
+  /* 底部工具栏 */
+  .side-nav-footer {
+    padding: 12px 8px;
+    width: 100%;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .side-nav-footer .side-nav-item {
+    justify-content: center !important;
+    overflow: visible !important;
+    padding: 12px 0 !important;
+    gap: 0 !important;
+  }
+
+  .side-nav-footer .side-nav-item .nav-icon {
+    overflow: visible !important;
+    text-align: center !important;
+    width: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+    font-size: 20px !important;
+  }
+
+  .side-nav-footer .side-nav-item .nav-text {
+    display: none !important;
+  }
+
+  .side-nav:hover .side-nav-footer .side-nav-item .nav-text {
+    display: inline !important;
+  }
+
+  .side-nav:hover .side-nav-footer .side-nav-item {
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .side-nav:hover .side-nav-footer .side-nav-item .nav-icon {
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  /* ============================================
+     问题9：深色主题时侧边栏变深色
+     ============================================ */
+  body.theme-dark .side-nav {
+    background: #151934;
+    border-right-color: #1E2548;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  }
+
+  body.theme-dark .side-nav-item {
+    color: #8B95B0;
+  }
+
+  body.theme-dark .side-nav-item:hover {
+    background: rgba(96, 165, 250, 0.1);
+    color: #60A5FA;
+  }
+
+  body.theme-dark .side-nav-footer {
+    border-top-color: #1E2548;
+  }
+
+  /* ============================================
+     问题2：整体靠左对齐 + 修复浅色主题页面重叠
+     ============================================ */
+  
+  /* 关键：非active页面必须隐藏，防止重叠 */
+  .page {
+    display: none !important;
+    background: var(--bg-primary, #F0F2F7) !important;
+  }
+
+  /* 页面容器 - 只对活动页面生效 */
+  .page.active {
+    display: flex !important;
+    width: 100% !important;
+    padding-left: 72px !important;
+    margin-left: 0 !important;
+    background: var(--bg-primary, #F0F2F7) !important;
+  }
+
+  /* 首页横版布局 - 只对活动页面生效 */
+  #homePage.active {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #homePage .top-bar {
+    position: relative !important;
+    padding-left: 12px !important;
+    flex-shrink: 0;
+  }
+
+  /* 搜索框拉宽 */
+  #homePage .search-bar {
+    max-width: none;
+    flex: 1;
+    margin-right: 24px;
+  }
+
+  #homePage .tab-nav {
+    flex-shrink: 0;
+    padding-left: 12px !important;
+  }
+  
+  #homePage .tab-item {
+    padding: 8px 14px !important;
+  }
+
+  #homePage .main-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 全局覆盖.main-content的overflow:hidden */
+  .main-content {
+    overflow-y: auto !important;
+    overflow-x: hidden;
+  }
+
+  /* 首页内容面板滚动 */
+  #homePage .home-tab-panel {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ============================================
+     问题7（终极修复）：推荐页鼠标滚轮滚动
+     核心：.main-content 成为滚动容器，.home-tab-panel 不需要滚动
+     ============================================ */
+  
+  /* 首页整体布局 */
+  #homePage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  #homePage .top-bar {
+    position: relative !important;
+    padding-left: 12px !important;
+    flex-shrink: 0 !important;
+    height: auto !important;
+    min-height: 56px !important;
+  }
+
+  /* 搜索框拉宽 */
+  #homePage .search-bar {
+    max-width: none;
+    flex: 1;
+    margin-right: 24px;
+  }
+
+  #homePage .tab-nav {
+    flex-shrink: 0 !important;
+    padding-left: 12px !important;
+    height: 44px !important;
+  }
+
+  /* 关键：main-content 成为真正的滚动容器 */
+  #homePage .main-content {
+    flex: 1 !important;
+    height: 0 !important; /* 配合 flex:1 让它占据剩余空间 */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* 全局覆盖.main-content的overflow:hidden */
+  .main-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 首页内容面板 - 不再需要自己滚动，作为正常文档流 */
+  #homePage .home-tab-panel {
+    position: relative !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: auto !important;
+  }
+
+  /* 热门推荐横版海报不要太大 */
+  #homePage .rec-banner {
+    max-height: 260px !important;
+  }
+
+  /* 桌面版：隐藏热门推荐横版banner，直接显示卡片 */
+  #homePage #hotBanner {
+    display: none !important;
+  }
+
+  /* 桌面版热门推荐5列 */
+  #homePage #hotGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  /* 只显示当前激活的tab面板，其他保持隐藏 */
+
+  /* ============================================
+     问题4（终极修复）：详情页横版布局
+     播放器在上（固定高度），下方内容可滚动
+     ============================================ */
+  #detailPage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  #detailPage .top-bar {
+    position: relative !important;
+    padding-left: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 详情页 body 成为可滚动容器 */
+  #detailPage .detail-body {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    height: 0 !important; /* 配合 flex:1 占据剩余空间 */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* 播放器区域 - 固定高度，不是 aspect-ratio */
+  #detailPage .detail-player {
+    width: 100% !important;
+    height: 320px !important; /* 固定高度 */
+    max-height: 40vh !important;
+    background: #000 !important;
+    flex-shrink: 0 !important;
+    position: relative;
+  }
+
+  #detailPage #playerArea {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+  }
+
+  /* 信息区域 */
+  #detailPage .detail-info {
+    padding: 16px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 源切换区域 */
+  #detailPage .source-tabs {
+    flex-shrink: 0 !important;
+  }
+
+  /* 集数区域 */
+  #detailPage .episodes-section {
+    padding: 12px 16px !important;
+  }
+
+  /* 详情页操作按钮 */
+  #detailPage .detail-actions {
+    padding: 12px 16px !important;
+    flex-shrink: 0 !important;
+    border-top: 1px solid var(--border-light);
+  }
+
+  /* ============================================
+     问题4：全屏播放器铺满屏幕
+     ============================================ */
+  body.fs-mode .side-nav {
+    display: none !important;
+  }
+
+  body.fs-mode #detailPage,
+  body.fs-mode #tvPage {
+    padding-left: 0 !important;
+  }
+
+  body.fs-mode .detail-player,
+  body.fs-mode #playerArea,
+  body.fs-mode .player-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    aspect-ratio: auto !important;
+    z-index: 9999 !important;
+    background: #000 !important;
+  }
+
+  body.fs-mode #detailPage .detail-body {
+    display: none !important;
+  }
+
+  /* 电视页全屏 */
+  body.fs-mode #tvPage .tv-player-section {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+  }
+
+  body.fs-mode #tvPage #tvPlayerArea {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+  }
+
+  body.fs-mode #tvPage .tv-source-bar,
+  body.fs-mode #tvPage .tv-group-tabs,
+  body.fs-mode #tvPage .main-content {
+    display: none !important;
+  }
+
+  /* ============================================
+     问题6：电视直播滚动
+     ============================================ */
+  #tvPage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #tvPage .tv-player-section {
+    position: relative !important;
+    flex-shrink: 0;
+  }
+
+  #tvPage #tvPlayerArea {
+    aspect-ratio: 16/9 !important;
+    background: #000 !important;
+    max-height: 40vh !important;
+  }
+
+  #tvPage .tv-source-bar {
+    flex-shrink: 0;
+  }
+
+  #tvPage .tv-group-tabs {
+    flex-shrink: 0;
+  }
+
+  #tvPage .main-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 频道网格调整 */
+  .tv-channel-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .tv-channel-item {
+    padding: 10px !important;
+    border-radius: 10px !important;
+    background: var(--bg-card) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .tv-channel-item:hover,
+  .tv-channel-item.focused {
+    background: var(--accent-bg) !important;
+    transform: scale(1.05) !important;
+  }
+
+  /* ============================================
+     问题5：分类筛选弹窗 - 改为抽屉式
+     ============================================ */
+  #categoryPage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  /* 筛选弹窗改为右侧抽屉 */
+  .filter-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 200;
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .filter-modal-overlay.active {
+    opacity: 1;
+  }
+
+  .filter-modal {
+    position: fixed;
+    top: 10vh !important;
+    left: auto !important;
+    right: 20px !important;
+    bottom: 10vh !important;
+    width: 360px !important;
+    max-width: 90vw !important;
+    background: var(--bg-primary);
+    z-index: 201;
+    border-radius: 16px !important;
+    transform: translateX(calc(100% + 20px));
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+
+  .filter-modal.active {
+    transform: translateX(0);
+  }
+
+  .filter-modal-header {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+
+  .filter-modal-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 12px 16px !important;
+  }
+
+  .filter-modal-footer {
+    padding: 16px !important;
+    gap: 12px !important;
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-light);
+    flex-shrink: 0;
+    background: var(--bg-primary);
+  }
+
+  .filter-btn {
+    flex: 1;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .filter-btn.reset {
+    background: var(--bg-tag) !important;
+    color: var(--text-secondary) !important;
+    margin-right: 8px;
+  }
+
+  .filter-btn.apply {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+
+  .filter-section {
+    margin-bottom: 12px !important;
+  }
+
+  .filter-opt {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+    margin: 4px !important;
+    display: inline-block;
+  }
+
+  /* 快速筛选标签间距 */
+  .qf-item {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+    border-radius: 14px !important;
+    margin-right: 6px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .cat-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cat-list-view {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .home-cat-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  #categoryPage .cat-top-bar {
+    flex-shrink: 0;
+  }
+
+  #categoryPage .cat-type-tabs {
+    flex-shrink: 0;
+  }
+
+  #categoryPage .quick-filter-bar {
+    flex-shrink: 0;
+  }
+
+  /* ============================================
+     问题8（终极修复）：我的页面横版 + 浅色主题文字截断
+     ============================================ */
+  #profilePage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
+
+  #profilePage .top-bar {
+    position: relative !important;
+    padding-left: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* 修复浅色主题文字被截断 - 关键修复 */
+  .profile-content {
+    flex: 1 !important;
+    height: 0 !important; /* 配合 flex:1 占据剩余空间 */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 16px !important;
+    margin-left: 0 !important; /* 不再被.page的padding-left影响 */
+    width: 100% !important; /* 确保宽度正确 */
+    box-sizing: border-box !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* 确保.user-row等元素不会被截断 */
+  .user-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg-card);
+    border-radius: 16px;
+    margin-bottom: 16px;
+    min-width: 0 !important; /* 防止flex子元素被截断 */
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .user-meta {
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .user-name-row {
+    margin-bottom: 4px;
+  }
+
+  .user-name {
+    font-size: 18px;
+    font-weight: 600;
+    white-space: nowrap !important; /* 防止文字换行 */
+    overflow: visible !important;
+  }
+
+  .user-desc {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+
+  .menu-list {
+    background: var(--bg-card);
+    border-radius: 12px;
+    overflow: visible !important;
+  }
+
+  .menu-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .menu-label {
+    flex: 1 !important;
+    font-size: 14px;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    min-width: 0 !important;
+  }
+
+  .menu-value {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    white-space: nowrap !important;
+  }
+
+  .menu-arrow {
+    font-size: 18px;
+    color: var(--text-tertiary);
+    flex-shrink: 0 !important;
+  }
+
+  .version-info {
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+
+  /* ============================================
+     搜索页横版
+     ============================================ */
+  #searchPage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #searchPage .search-page-bar {
+    flex-shrink: 0;
+  }
+
+  #searchPage .main-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+
+  .search-hot-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* ============================================
+     历史/收藏页横版
+     ============================================ */
+  #historyPage,
+  #favPage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #historyPage .main-content,
+  #favPage .main-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+
+  /* ============================================
+     首页内容网格调整 - 更多列
+     ============================================ */
+  .rec-grid-2 {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .rec-grid-3 {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  /* 视频卡片横版适配 */
+  .video-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  .video-card:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2) !important;
+    z-index: 10 !important;
+  }
+
+  /* 分类卡片横版适配 */
+  .cat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  .cat-card:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2) !important;
+    z-index: 10 !important;
+  }
+
+  /* ============================================
+     采集源管理页横版
+     ============================================ */
+  #sourcePage,
+  #liveSourcePage {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #sourcePage .main-content,
+  #liveSourcePage .main-content {
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+
+  /* ============================================
+     问题9：深色主题适配 - 使用body.theme-dark
+     ============================================ */
+  body.theme-dark .page,
+  body.theme-dark .page.active {
+    background: #0A0E27 !important;
+  }
+
+  body.theme-dark .side-nav {
+    background: #151934;
+    border-right-color: #1E2548;
+  }
+
+  body.theme-dark .top-bar,
+  body.theme-dark .cat-top-bar,
+  body.theme-dark .search-page-bar {
+    background: #0A0E27;
+    border-bottom-color: #1E2548;
+  }
+
+  body.theme-dark .profile-content,
+  body.theme-dark .cat-content,
+  body.theme-dark .main-content {
+    background: #0A0E27;
+  }
+
+  body.theme-dark .user-row,
+  body.theme-dark .stats-row .stat-cell,
+  body.theme-dark .menu-list {
+    background: #151934;
+  }
+
+  body.theme-dark .menu-row {
+    border-bottom-color: #1E2548;
+  }
+
+  body.theme-dark .section-card {
+    background: #151934;
+  }
+
+  body.theme-dark .video-card,
+  body.theme-dark .cat-card {
+    background: #151934;
+  }
+
+  body.theme-dark .tv-channel-item {
+    background: #151934;
+  }
+
+  body.theme-dark .cat-card-poster,
+  body.theme-dark .video-card-poster {
+    box-shadow: none;
+  }
+
+  /* ============================================
+     焦点高亮样式
+     ============================================ */
+  .focused {
+    outline: 3px solid var(--accent, #60A5FA) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.4) !important;
+  }
+
+  /* ============================================
+     大屏幕适配
+     ============================================ */
+  @media (min-width: 1024px) {
+    .side-nav {
+      width: 80px;
+    }
+
+    .side-nav:hover {
+      width: 200px;
+    }
+
+    /* 页面容器 - 只对活动页面生效 */
+    .page.active {
+      padding-left: 80px !important;
+    }
+
+    .rec-grid-2 {
+      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+
+    .rec-grid-3 {
+      grid-template-columns: repeat(6, 1fr) !important;
+    }
+
+    .cat-list-view {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    }
+
+    .home-cat-grid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .side-nav {
+      width: 88px;
+    }
+
+    .side-nav:hover {
+      width: 220px;
+    }
+
+    .page {
+      padding-left: 88px !important;
+    }
+
+    .rec-grid-2 {
+      grid-template-columns: repeat(6, 1fr) !important;
+    }
+
+    .rec-grid-3 {
+      grid-template-columns: repeat(7, 1fr) !important;
+    }
+
+    .cat-list-view {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    }
+
+    .home-cat-grid {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    }
+
+    .tv-channel-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+    }
+  }
+}

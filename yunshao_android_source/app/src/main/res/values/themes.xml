@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App主主题 - 使用浅色背景避免启动页切换闪烁 -->
+    <style name="Theme.YunShao" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">#FFF5F6F8</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:statusBarColor">#FFF5F6F8</item>
+        <item name="android:navigationBarColor">#FFFFFFFF</item>
+    </style>
+    
+    <!-- 启动页主题 - 冷启动时先显示浅灰底+logo，等WebView加载完就是完整动画 -->
+    <style name="Theme.YunShao.Splash" parent="Theme.YunShao">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:windowDisablePreview">false</item>
+    </style>
+</resources>

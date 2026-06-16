@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>云梢</title>
+<script>if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.add('theme-dark');document.getElementById('boot-style')||document.write('<style id="boot-style">html,body{background:#0A0E27!important;margin:0;padding:0;}</style>');}</script>
+<style id="boot-style">html,body{background:#F0F2F7!important;margin:0;padding:0;}</style>
+<link rel="stylesheet" href="style.css">
+<script>
+(function(){
+  // 桌面端检测
+  var isDesktop=!!(window.electronAPI&&window.electronAPI.isDesktop);
+  // 设备检测
+  var w=window.innerWidth||document.documentElement.clientWidth;
+  var hasTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
+  var ua=navigator.userAgent||'';
+  var isTV=/Android\s+TV|Leanback|AFT|SMART-TV|NetCast|WebOS/.test(ua);
+  var isWide=isDesktop||w>=768;
+  
+  if(isWide){
+    // 加载横版样式
+    var link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='widescreen.css';
+    document.head.appendChild(link);
+    
+    // 标记设备类型
+    if(isDesktop){
+      document.documentElement.setAttribute('data-device','desktop');
+    } else {
+      document.documentElement.setAttribute('data-device',isTV?'tv':hasTouch?'tablet':'desktop');
+    }
+    
+    // 电视/桌面加载焦点管理
+    if(isTV||!hasTouch||isDesktop){
+      var s=document.createElement('script');
+      s.src='focus.js';
+      s.onload=function(){if(window.FocusManager)FocusManager.init();};
+      document.head.appendChild(s);
+    }
+  } else {
+    document.documentElement.setAttribute('data-device','mobile');
+  }
+})();
+</script>
+</head>
+<body tabindex="0" style="background:#F0F2F7">
+<div id="app">
+  <!-- 侧边栏导航（桌面端） -->
+  <nav class="side-nav" id="sideNav" style="display:none">
+    <div class="side-nav-items">
+      <a class="side-nav-item active" data-page="homePage" onclick="switchTab('homePage')">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-text">首页</span>
+      </a>
+      <a class="side-nav-item" data-page="categoryPage" onclick="goCategory(0)">
+        <span class="nav-icon">📂</span>
+        <span class="nav-text">分类</span>
+      </a>
+      <a class="side-nav-item" data-page="tvPage" onclick="switchTab('tvPage')">
+        <span class="nav-icon">📺</span>
+        <span class="nav-text">电视</span>
+      </a>
+      <a class="side-nav-item" data-page="profilePage" onclick="switchTab('profilePage')">
+        <span class="nav-icon">👤</span>
+        <span class="nav-text">我的</span>
+      </a>
+    </div>
+    <div class="side-nav-footer">
+      <a class="side-nav-item" onclick="toggleTheme()">
+        <span class="nav-icon" id="darkModeIcon">🌙</span>
+        <span class="nav-text" id="darkModeText">深色模式</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- 首页 -->
+  <div class="page active page-with-nav" id="homePage">
+    <div class="top-bar">
+      <div class="app-brand"><span class="brand-icon"><img src="data:image/png;base64,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" alt="☁️" style="width:28px;height:28px"></span></div>
+      <div class="search-bar" id="homeSearchBar">
+        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <input type="text" placeholder="搜索影视..." id="searchInput" readonly>
+      </div>
+    </div>
+    <div class="tab-nav" id="tabNav">
+      <span class="tab-item active" data-tab="recommend">推荐</span>
+      <span class="tab-item" data-tab="movie">电影</span>
+      <span class="tab-item" data-tab="tv">电视剧</span>
+      <span class="tab-item" data-tab="variety">综艺</span>
+      <span class="tab-item" data-tab="anime">动漫</span>
+      <span class="tab-item" data-tab="short">短剧</span>
+    </div>
+    <div class="main-content" id="homeContent">
+      <!-- 各Tab独立滚动容器，切换只做显隐，滚动位置互不影响 -->
+      <div id="homeTab_recommend" class="home-tab-panel">
+        <div class="section-card" id="hotSection">
+          <div class="section-header"><span class="section-title">🔥 热门推荐</span><span class="section-more" onclick="goCategory(0)">更多 ›</span></div>
+          <div id="hotBanner" class="rec-banner"></div>
+          <div id="hotGrid" class="rec-grid-2"></div>
+        </div>
+        <div class="section-card" id="shortSection">
+          <div class="section-header"><span class="section-title">📱 热门短剧</span><span class="section-more" onclick="goCategory(5)">更多 ›</span></div>
+          <div id="shortGrid" class="rec-grid-3"></div>
+        </div>
+        <div class="section-card" id="movieSection">
+          <div class="section-header"><span class="section-title">🎬 最新电影</span><span class="section-more" onclick="goCategory(1)">更多 ›</span></div>
+          <div id="movieGrid" class="rec-grid-3"></div>
+        </div>
+        <div class="section-card" id="tvSection">
+          <div class="section-header"><span class="section-title">📺 最新电视剧</span><span class="section-more" onclick="goCategory(2)">更多 ›</span></div>
+          <div id="tvGrid" class="rec-grid-3"></div>
+        </div>
+        <div class="section-card" id="varietySection">
+          <div class="section-header"><span class="section-title">🎤 最新综艺</span><span class="section-more" onclick="goCategory(3)">更多 ›</span></div>
+          <div id="varietyGrid" class="rec-grid-3"></div>
+        </div>
+        <div class="section-card" id="animeSection">
+          <div class="section-header"><span class="section-title">✨ 最新动漫</span><span class="section-more" onclick="goCategory(4)">更多 ›</span></div>
+          <div id="animeGrid" class="rec-grid-3"></div>
+        </div>
+        <div style="height:80px"></div>
+      </div>
+      <div id="homeTab_movie" class="home-tab-panel" style="display:none">
+        <div class="home-cat-grid" id="catGrid_1"></div>
+        <div class="load-more" id="catMore_1" onclick="loadMoreHomeCat(1)">加载更多</div>
+        <div style="height:80px"></div>
+      </div>
+      <div id="homeTab_tv" class="home-tab-panel" style="display:none">
+        <div class="home-cat-grid" id="catGrid_2"></div>
+        <div class="load-more" id="catMore_2" onclick="loadMoreHomeCat(2)">加载更多</div>
+        <div style="height:80px"></div>
+      </div>
+      <div id="homeTab_variety" class="home-tab-panel" style="display:none">
+        <div class="home-cat-grid" id="catGrid_3"></div>
+        <div class="load-more" id="catMore_3" onclick="loadMoreHomeCat(3)">加载更多</div>
+        <div style="height:80px"></div>
+      </div>
+      <div id="homeTab_anime" class="home-tab-panel" style="display:none">
+        <div class="home-cat-grid" id="catGrid_4"></div>
+        <div class="load-more" id="catMore_4" onclick="loadMoreHomeCat(4)">加载更多</div>
+        <div style="height:80px"></div>
+      </div>
+      <div id="homeTab_short" class="home-tab-panel" style="display:none">
+        <div class="home-cat-grid" id="catGrid_5"></div>
+        <div class="load-more" id="catMore_5" onclick="loadMoreHomeCat(5)">加载更多</div>
+        <div style="height:80px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分类页 - 方案四 -->
+  <div class="page" id="categoryPage">
+    <div class="cat-top-bar">
+      <span class="cat-page-title">分类</span>
+      <div class="cat-top-actions">
+        <button class="cat-action-btn" id="catFilterBtn" title="高级筛选">⚙️</button>
+      </div>
+    </div>
+    <div class="cat-type-tabs" id="catTypeTabs">
+      <div class="ctt-scroll">
+        <span class="ctt-item active" data-type="0">全部</span>
+        <span class="ctt-item" data-type="1">电影</span>
+        <span class="ctt-item" data-type="2">电视剧</span>
+        <span class="ctt-item" data-type="3">综艺</span>
+        <span class="ctt-item" data-type="4">动漫</span>
+        <span class="ctt-item" data-type="5">短剧</span>
+      </div>
+    </div>
+    <div class="quick-filter-bar">
+      <div class="qf-scroll" id="catQuickFilterScroll">
+        <span class="qf-item active" data-filter="all">全部</span>
+        <span class="qf-item" data-filter="动作">动作</span>
+        <span class="qf-item" data-filter="喜剧">喜剧</span>
+        <span class="qf-item" data-filter="爱情">爱情</span>
+        <span class="qf-item" data-filter="科幻">科幻</span>
+        <span class="qf-item" data-filter="悬疑">悬疑</span>
+        <span class="qf-item" data-filter="恐怖">恐怖</span>
+        <span class="qf-item" data-filter="战争">战争</span>
+        <span class="qf-item" data-filter="动画">动画</span>
+      </div>
+    </div>
+    <div class="cat-content" id="catPageContent">
+      <!-- 每个分类Tab独立容器，切换只做显隐 -->
+      <div id="catPageTab_0" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_0"></div>
+        <div class="load-more" id="catPageMore_0" onclick="loadMoreCatPageTab(0)">加载更多</div>
+      </div>
+      <div id="catPageTab_1" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_1"></div>
+        <div class="load-more" id="catPageMore_1" onclick="loadMoreCatPageTab(1)">加载更多</div>
+      </div>
+      <div id="catPageTab_2" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_2"></div>
+        <div class="load-more" id="catPageMore_2" onclick="loadMoreCatPageTab(2)">加载更多</div>
+      </div>
+      <div id="catPageTab_3" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_3"></div>
+        <div class="load-more" id="catPageMore_3" onclick="loadMoreCatPageTab(3)">加载更多</div>
+      </div>
+      <div id="catPageTab_4" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_4"></div>
+        <div class="load-more" id="catPageMore_4" onclick="loadMoreCatPageTab(4)">加载更多</div>
+      </div>
+      <div id="catPageTab_5" class="cat-page-tab-panel" style="display:none">
+        <div class="cat-list-view" id="catPageList_5"></div>
+        <div class="load-more" id="catPageMore_5" onclick="loadMoreCatPageTab(5)">加载更多</div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-modal" id="catFilterModal">
+    <div class="filter-modal-header">
+      <span class="filter-modal-title">筛选</span>
+      <button class="filter-modal-close" id="catFilterCloseBtn">×</button>
+    </div>
+    <div class="filter-modal-body">
+      <div class="filter-section">
+        <div class="filter-section-title">地区</div>
+        <div class="filter-options" id="catFilterAreaOptions">
+          <span class="filter-opt active" data-area="all">全部</span>
+          <span class="filter-opt" data-area="大陆">大陆</span>
+          <span class="filter-opt" data-area="香港">香港</span>
+          <span class="filter-opt" data-area="台湾">台湾</span>
+          <span class="filter-opt" data-area="美国">美国</span>
+          <span class="filter-opt" data-area="日本">日本</span>
+          <span class="filter-opt" data-area="韩国">韩国</span>
+          <span class="filter-opt" data-area="英国">英国</span>
+          <span class="filter-opt" data-area="其他">其他</span>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-section-title">年份</div>
+        <div class="filter-options" id="catFilterYearOptions">
+          <span class="filter-opt active" data-year="all">全部</span>
+          <span class="filter-opt" data-year="2026">2026</span>
+          <span class="filter-opt" data-year="2025">2025</span>
+          <span class="filter-opt" data-year="2024">2024</span>
+          <span class="filter-opt" data-year="2023">2023</span>
+          <span class="filter-opt" data-year="2022">2022</span>
+          <span class="filter-opt" data-year="2021">2021</span>
+          <span class="filter-opt" data-year="2020">2020</span>
+          <span class="filter-opt" data-year="2019">2019</span>
+          <span class="filter-opt" data-year="00">更早</span>
+        </div>
+      </div>
+      <div class="filter-section">
+        <div class="filter-section-title">排序</div>
+        <div class="filter-options sort-options" id="catFilterSortOptions">
+          <span class="filter-opt active" data-sort="hot">热播</span>
+          <span class="filter-opt" data-sort="new">最新</span>
+          <span class="filter-opt" data-sort="score">评分</span>
+        </div>
+      </div>
+    </div>
+    <div class="filter-modal-footer">
+      <button class="filter-btn reset" id="catFilterResetBtn">重置</button>
+      <button class="filter-btn apply" id="catFilterApplyBtn">应用</button>
+    </div>
+  </div>
+  <div class="filter-modal-overlay" id="catFilterOverlay"></div>
+
+  <!-- 搜索页 -->
+  <div class="page" id="searchPage">
+    <div class="search-page-bar">
+      <button class="back-btn" onclick="goBack()">‹</button>
+      <div class="search-page-input">
+        <svg class="icon-sm" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4-4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <input type="text" placeholder="搜索你想看的影视作品..." id="searchInputFull" autofocus>
+      </div>
+    </div>
+    <div class="main-content main-content-scroll" id="searchContent">
+      <div id="searchHistorySection" class="search-section" style="display:none">
+        <div class="search-section-header">
+          <span class="search-section-title">搜索历史</span>
+          <span class="search-clear-btn" onclick="clearAllHistory()">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M10 11v6M14 11v6" fill="none" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </div>
+        <div class="search-history-list" id="searchHistoryList"></div>
+      </div>
+      <div id="hotSearchSection" class="search-section">
+        <div class="search-section-header">
+          <span class="search-section-title">热门搜索</span>
+        </div>
+        <div class="search-hot-list" id="hotSearchList"></div>
+      </div>
+      <div id="searchResultSection" style="display:none">
+        <div class="search-result-header" id="searchResultHeader">正在搜索...</div>
+        <div class="search-result-list" id="searchResultList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情页 -->
+  <div class="page" id="detailPage">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goBack()">‹</button>
+      <span class="page-title" id="detailTitle">详情</span>
+    </div>
+    <div class="detail-body">
+      <div class="detail-player" id="playerArea">
+        <div class="player-placeholder" id="playerPlaceholder">
+          <svg viewBox="0 0 24 24" width="44" height="44"><polygon points="5,3 19,12 5,21" fill="rgba(255,255,255,0.8)"/></svg>
+          <span class="placeholder-hint">点击集数开始播放</span>
+        </div>
+        <img id="detailPoster" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;opacity:0.4;pointer-events:none" src="" alt="">
+      </div>
+      <!-- 标题+信息卡片 -->
+      <div class="detail-card" style="margin:8px 10px">
+        <div class="detail-card-body">
+          <h2 class="info-title" id="infoTitle" style="font-size:18px;margin-bottom:6px"></h2>
+          <div class="info-meta" id="infoMeta" style="font-size:12px;color:var(--text-secondary);margin-bottom:8px"></div>
+        </div>
+      </div>
+      <!-- JS兼容的旧ID容器（隐藏，仅供JS查找） -->
+      <div id="sourceTabs" style="display:none"></div>
+      <div id="episodesSection" style="display:none"></div>
+      <!-- 源切换卡片 -->
+      <div class="detail-card" id="sourceCard" style="display:none;margin:8px 10px">
+        <div class="detail-card-title" style="font-size:14px;font-weight:600;margin-bottom:8px">📺 播放源</div>
+        <div class="source-tabs-scroll" id="sourceTabsScroll" style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none"></div>
+      </div>
+      <!-- 选集卡片 -->
+      <div class="detail-card" id="episodesCard" style="display:none;margin:8px 10px">
+        <div class="detail-card-title" style="font-size:14px;font-weight:600;margin-bottom:8px">📋 选集</div>
+        <div class="ep-grid" id="episodesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px"></div>
+      </div>
+      <!-- 简介卡片（放播放页底部） -->
+      <!-- 由JS动态填充 -->
+      <div class="detail-card" id="detailDescCard" style="display:none;margin:8px 10px">
+        <div class="detail-card-title" style="font-size:14px;font-weight:600;margin-bottom:8px">📖 简介</div>
+        <div class="detail-card-body" id="detailDescText" style="font-size:13px;color:var(--text-secondary);line-height:1.7"></div>
+        <span class="desc-toggle" id="detailDescToggle" style="display:none;font-size:13px;color:var(--accent);cursor:pointer;margin-top:4px" onclick="toggleDetailDesc()">展开</span>
+      </div>
+      <div class="detail-actions" style="display:flex;gap:10px;padding:12px 16px 24px">
+        <button class="action-btn" onclick="playExternal()" style="flex:1;padding:12px;border-radius:14px;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-primary);font-size:14px;font-weight:600;cursor:pointer;text-align:center">⏏ 外部播放</button>
+        <button class="action-btn" id="detailFavBtn" onclick="toggleFavorite()" style="flex:1;padding:12px;border-radius:14px;border:1px solid var(--border-light);background:var(--bg-card);color:var(--text-primary);font-size:14px;font-weight:600;cursor:pointer;text-align:center">♡ 收藏</button>
+      </div>
+    </div>
+    <!-- 底部固定播放条 -->
+    <div class="mini-player-bar" id="miniPlayerBar" style="display:none">
+      <div class="mini-player-info">
+        <span class="mini-player-title" id="miniPlayerTitle"></span>
+        <span class="mini-player-ep" id="miniPlayerEp"></span>
+      </div>
+      <button class="mini-player-btn" id="miniPlayerBtn" onclick="toggleMiniPlay()">
+        <svg id="miniPlayIcon" viewBox="0 0 24 24" width="20" height="20"><polygon points="5,3 19,12 5,21" fill="#fff"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 电视 -->
+  
+
+<div class="page" id="detailInfoPage">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goBack()">‹</button>
+      <span class="page-title">影视详情</span>
+      <button class="info-fav-btn" id="infoFavBtn" onclick="toggleInfoFav()">♡</button>
+    </div>
+    <div class="detail-info-scroll">
+      <!-- 基本信息卡片 -->
+      <div class="detail-card">
+        <div class="detail-card-body" style="display:flex;gap:14px;">
+          <img id="infoPoster" src="" alt="" style="width:100px;height:150px;border-radius:8px;object-fit:cover;background:var(--bg-tag);flex-shrink:0;" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 150%22><rect fill=%22%23ccc%22 width=%22100%22 height=%22150%22/><text x=%2250%22 y=%2280%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2214%22>暂无</text></svg>'">
+          <div style="flex:1;min-width:0;">
+            <h2 id="infoTitle2" style="font-size:18px;font-weight:700;margin:0 0 6px;"></h2>
+            <div id="infoSubTitle" style="font-size:12px;color:var(--text-secondary);margin-bottom:4px;display:none;"></div>
+            <div id="infoMeta2" style="font-size:13px;color:var(--text-secondary);margin-bottom:2px;"></div>
+            <div id="infoMeta3" style="font-size:13px;color:var(--text-secondary);margin-bottom:2px;display:none;"></div>
+            <div id="infoMeta4" style="font-size:13px;color:var(--text-secondary);display:none;"></div>
+            <div id="infoTags" style="margin-top:6px;display:none;"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 评分卡片 -->
+      <div class="detail-card" id="infoRatingCard" style="display:none">
+        <div class="detail-card-title">⭐ 评分</div>
+        <div class="detail-card-body" id="infoRatingBody"></div>
+      </div>
+      <!-- 剧情简介卡片 -->
+      <div class="detail-card" id="infoDescCard" style="display:none">
+        <div class="detail-card-title">📝 剧情简介</div>
+        <div class="detail-card-body"><div class="detail-desc-text" id="infoDescText"></div><span class="desc-toggle" id="infoDescToggle" onclick="toggleInfoDesc()" style="display:none">展开</span></div>
+      </div>
+      <!-- 导演卡片 -->
+      <div class="detail-card" id="infoDirectorCard" style="display:none">
+        <div class="detail-card-title">🎬 导演</div>
+        <div class="detail-card-body" id="infoDirectorBody"></div>
+      </div>
+      <!-- 演员卡片 -->
+      <div class="detail-card" id="infoActorCard" style="display:none">
+        <div class="detail-card-title">🎭 演员</div>
+        <div class="detail-card-body" id="infoActorBody"></div>
+      </div>
+      <div style="height:80px;"></div>
+    </div>
+    <!-- 底部悬浮播放按钮 -->
+    <div class="info-float-play" onclick="goToPlayFromInfo()">
+      <svg viewBox="0 0 24 24" width="22" height="22"><polygon points="6,3 20,12 6,21" fill="#fff"/></svg>
+    </div>
+  </div>
+
+  <!-- 电视 -->
+  <div class="page page-with-nav" id="tvPage">
+    <div class="tv-player-section">
+      <div class="detail-player" id="tvPlayerArea">
+        <div class="player-placeholder" id="tvPlayerPlaceholder">
+          <svg viewBox="0 0 24 24" width="44" height="44"><polygon points="5,3 19,12 5,21" fill="rgba(255,255,255,0.8)"/></svg>
+          <span class="placeholder-hint">点击频道开始播放</span>
+        </div>
+      </div>
+    </div>
+    <div class="tv-source-bar" id="tvSourceBar">
+      <div class="tv-source-selector" id="tvSourceSelector" onclick="toggleTvSourceDropdown()">
+        <span class="tv-source-current" id="tvSourceCurrent">选择直播源</span>
+        <svg class="tv-source-arrow" id="tvSourceArrow" viewBox="0 0 24 24" width="16" height="16"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="tv-source-dropdown" id="tvSourceDropdown"></div>
+    </div>
+    <div class="tv-group-tabs" id="tvGroupScroll"></div>
+    <div class="main-content" id="tvContent">
+      <div class="tv-channel-area">
+        <div class="tv-channel-grid" id="tvChannelGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 我的 -->
+  <div class="page page-with-nav" id="profilePage">
+    <div class="top-bar profile-top"><span class="page-title">我的</span></div>
+    <div class="main-content profile-content">
+      <div class="user-row">
+        <div class="avatar-mini">👤</div>
+        <div class="user-meta">
+          <div class="user-name-row"><span class="user-name">影视追光者</span></div>
+          <div class="user-desc">追剧使我快乐 ✨</div>
+        </div>
+      </div>
+      <div class="stats-row" id="profileStats">
+        <div class="stat-cell" onclick="showPage('historyPage')"><div class="stat-num" id="statHistory">0</div><div class="stat-lbl">历史</div></div>
+        <div class="stat-cell" onclick="showPage('favPage')"><div class="stat-num" id="statFav">0</div><div class="stat-lbl">收藏</div></div>
+        <div class="stat-cell"><div class="stat-num" id="statFollow">0</div><div class="stat-lbl">追剧</div></div>
+      </div>
+      <div class="menu-group">
+        <div class="group-title">内容管理</div>
+        <div class="menu-list">
+          <div class="menu-row" onclick="showPage('historyPage')"><div class="menu-icon-box icon-blue">📺</div><span class="menu-label">观看历史</span><span class="menu-value" id="menuHistory"></span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="showPage('favPage')"><div class="menu-icon-box icon-pink">❤️</div><span class="menu-label">我的收藏</span><span class="menu-value" id="menuFav"></span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="loadSourcePage()"><div class="menu-icon-box icon-green">📡</div><span class="menu-label">采集源管理</span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="loadLiveSourcePage()"><div class="menu-icon-box icon-purple">📺</div><span class="menu-label">直播源管理</span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="toggleTheme()"><div class="menu-icon-box icon-orange">🎨</div><span class="menu-label">切换主题</span><span class="menu-value" id="menuTheme">深色</span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="toggleLayout()"><div class="menu-icon-box icon-blue">📱</div><span class="menu-label">切换布局</span><span class="menu-value" id="menuLayout">竖屏</span><span class="menu-arrow">›</span></div>
+        </div>
+      </div>
+      <div class="menu-group">
+        <div class="group-title">系统设置</div>
+        <div class="menu-list">
+          <div class="menu-row" onclick="clearCache()"><div class="menu-icon-box icon-red">🗑️</div><span class="menu-label">清除缓存</span><span class="menu-value" id="menuCache"></span><span class="menu-arrow">›</span></div>
+          <div class="menu-row" onclick="showAboutPage()"><div class="menu-icon-box icon-cyan">ℹ️</div><span class="menu-label">关于云梢</span><span class="menu-value">v3.9.0</span><span class="menu-arrow">›</span></div>
+        </div>
+      </div>
+      <div class="version-info">云梢影视 v3.9.0</div>
+    </div>
+  </div>
+
+  <div class="page" id="historyPage">
+    <div class="top-bar"><button class="back-btn" onclick="goBack()">‹</button><span class="page-title">观看历史</span><button class="mgmt-toggle-btn" id="histMgmtBtn" onclick="toggleHistMgmt()">管理</button><button class="mgmt-select-top-btn" id="histSelectAllBtn" onclick="histSelectAll()" style="display:none">全选</button><button class="mgmt-delete-top-btn" id="histDeleteBtn" onclick="histBatchDelete()" style="display:none">删除</button></div>
+    <div class="main-content main-content-scroll" id="histContent">
+      <div class="mgmt-list" id="historyList"></div>
+    </div>
+  </div>
+  <div class="page" id="favPage">
+    <div class="top-bar"><button class="back-btn" onclick="goBack()">‹</button><span class="page-title">我的收藏</span><button class="mgmt-toggle-btn" id="favMgmtBtn" onclick="toggleFavMgmt()">管理</button><button class="mgmt-select-top-btn" id="favSelectAllBtn" onclick="favSelectAll()" style="display:none">全选</button><button class="mgmt-delete-top-btn" id="favDeleteBtn" onclick="favBatchDelete()" style="display:none">删除</button></div>
+    <div class="main-content main-content-scroll" id="favContent">
+      <div class="mgmt-list" id="favList"></div>
+    </div>
+  </div>
+  <div class="page" id="sourcePage">
+    <div class="top-bar"><button class="back-btn" onclick="goBack()">‹</button><span class="page-title">采集源管理</span><div class="top-bar-actions"><button class="mgmt-toggle-btn" onclick="checkAllSources()" id="checkAllBtn">检测</button><button class="mgmt-toggle-btn" onclick="showAddSourceModal()">+ 添加</button></div></div>
+    <div class="main-content main-content-scroll" id="sourceContent"></div>
+  </div>
+  <div class="page" id="aboutPage">
+    <div class="top-bar"><button class="back-btn" onclick="goBack()">‹</button><span class="page-title">关于云梢</span></div>
+    <div class="main-content main-content-scroll" id="aboutContent"></div>
+  </div>
+  <!-- 添加/编辑采集源弹窗 -->
+  <div id="sourceModal" style="display:none">
+    <div class="confirm-overlay" onclick="closeSourceModal()"></div>
+    <div class="source-modal-dialog">
+      <div class="src-modal-title" id="srcModalTitle">添加采集源</div>
+      <div class="src-modal-field"><label>源名称</label><input id="srcNameInput" placeholder="如：光速资源" class="src-modal-input"></div>
+      <div class="src-modal-field"><label>API地址</label><input id="srcUrlInput" placeholder="如：https://api.example.com" class="src-modal-input"></div>
+      <div class="src-modal-btns">
+        <button class="src-modal-cancel" onclick="closeSourceModal()">取消</button>
+        <button class="src-modal-ok" id="srcModalOkBtn" onclick="submitSource()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 直播源管理页面 -->
+  <div class="page" id="liveSourcePage">
+    <div class="top-bar"><button class="back-btn" onclick="goBack()">‹</button><span class="page-title">直播源管理</span><button class="mgmt-toggle-btn" onclick="showAddLiveSourceModal()">+ 添加</button></div>
+    <div class="main-content main-content-scroll" id="liveSourceContent"></div>
+  </div>
+  <!-- 添加/编辑直播源弹窗 -->
+  <div id="liveSourceModal" style="display:none">
+    <div class="confirm-overlay" onclick="closeLiveSourceModal()"></div>
+    <div class="source-modal-dialog">
+      <div class="src-modal-title" id="liveSrcModalTitle">添加直播源</div>
+      <div class="src-modal-field"><label>源名称</label><input id="liveSrcNameInput" placeholder="如：巧技直播" class="src-modal-input"></div>
+      <div class="src-modal-field"><label>源地址</label><input id="liveSrcUrlInput" placeholder="TVBox JSON / 频道txt / m3u地址" class="src-modal-input"></div>
+      <div class="src-modal-field">
+        <label>源类型</label>
+        <select id="liveSrcTypeInput" class="src-modal-input" style="appearance:auto;padding:8px 12px">
+          <option value="auto">自动识别</option>
+          <option value="tvbox">TVBox配置</option>
+          <option value="txt">频道列表(txt)</option>
+          <option value="m3u">M3U播放列表</option>
+        </select>
+      </div>
+      <div class="src-modal-btns">
+        <button class="src-modal-cancel" onclick="closeLiveSourceModal()">取消</button>
+        <button class="src-modal-ok" onclick="submitLiveSource()">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部导航(3项: 首页/分类/我的) -->
+  <div class="bottom-nav" id="bottomNav">
+    <div class="nav-item active" data-page="homePage" onclick="switchTab('homePage')">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>首页</span>
+    </div>
+    <div class="nav-item" data-page="categoryPage" onclick="goCategory(0)">
+      <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>分类</span>
+    </div>
+    <div class="nav-item" data-page="tvPage" onclick="switchTab('tvPage')">
+      <svg viewBox="0 0 24 24" width="20" height="20"><rect x="2" y="7" width="20" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7 2l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>电视</span>
+    </div>
+    <div class="nav-item" data-page="profilePage" onclick="switchTab('profilePage')">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>我的</span>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="/app.js"></script>
+</body>

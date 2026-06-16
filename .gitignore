@@ -1,0 +1,31 @@
+# Android
+*.apk
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Keystore (keep out of repo for security)
+*.keystore
+!debug.keystore
+
+# Backup files
+*.bak
+*.v3.18.0
+assets_backup/
