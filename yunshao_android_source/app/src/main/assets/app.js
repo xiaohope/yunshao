@@ -106,6 +106,12 @@ function showPage(pid) {
   const nav=document.getElementById('bottomNav');
   if(nav) nav.style.display=(pid==='detailPage'||pid==='searchPage')?'none':'';
   
+  // 返回首页时清除搜索输入框
+  if(pid==='homePage'){
+    const si=document.getElementById('searchInput');if(si)si.value='';
+    const sf=document.getElementById('searchInputFull');if(sf)sf.value='';
+  }
+  
   // 进入历史/收藏/个人页时刷新数据
   if(pid==='historyPage'||pid==='favPage'||pid==='profilePage') loadProfileData();
   
@@ -278,6 +284,13 @@ function removeFullscreenCSS() {
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
+    // 移除滑动快进事件监听
+    if (pa._swipeHandler) {
+      pa.removeEventListener('touchstart', pa._swipeHandler.touchstart);
+      pa.removeEventListener('touchmove', pa._swipeHandler.touchmove);
+      pa.removeEventListener('touchend', pa._swipeHandler.touchend);
+      delete pa._swipeHandler;
+    }
     // 恢复自定义全屏按钮
     const fsBtn=pa.querySelector('.video-fs-btn');
     if(fsBtn) fsBtn.style.display='';
@@ -335,65 +348,83 @@ function addFullscreenSwipe(playerArea) {
   let startX = 0, startY = 0;
   let isSwiping = false;
   let swipeDirection = '';
+  let hasMoved = false;
   
-  // 移除旧的事件监听（如果有的话）
-  if (playerArea._swipeHandler) {
-    playerArea.removeEventListener('touchstart', playerArea._swipeHandler);
-    playerArea.removeEventListener('touchmove', playerArea._swipeHandler);
-    playerArea.removeEventListener('touchend', playerArea._swipeHandler);
-  }
+  const isTouchOutsideControls = (clientX, clientY) => {
+    const controls = playerArea.querySelector('.fullscreen-controls');
+    if (controls) {
+      const rect = controls.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+        return false;
+      }
+    }
+    return true;
+  };
   
-  const handler = (e) => {
-    // 忽略点击控制按钮时的事件
-    if (e.target.closest('.fullscreen-controls') || e.target.closest('.player-info-overlay')) {
-      return;
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    if (!isTouchOutsideControls(touch.clientX, touch.clientY)) return;
+    
+    startX = touch.clientX;
+    startY = touch.clientY;
+    isSwiping = true;
+    hasMoved = false;
+    swipeDirection = '';
+  };
+  
+  const handleTouchMove = (e) => {
+    if (!isSwiping) return;
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+    
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      hasMoved = true;
     }
     
-    if (e.type === 'touchstart') {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      isSwiping = true;
-      swipeDirection = '';
-    } else if (e.type === 'touchmove' && isSwiping) {
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const deltaX = currentX - startX;
-      const deltaY = currentY - startY;
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+      swipeDirection = deltaX > 0 ? 'right' : 'left';
+      e.preventDefault();
       
-      // 判断主要方向（水平滑动优先）
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-        swipeDirection = deltaX > 0 ? 'right' : 'left';
-        e.preventDefault();
-        
-        // 计算快进/快退时间（滑动距离的比例，最大30秒）
-        const screenWidth = window.innerWidth;
-        const ratio = Math.abs(deltaX) / screenWidth;
-        const skipTime = Math.min(ratio * 60, 30); // 最大快进30秒
-        
-        // 更新视频时间
-        if (swipeDirection === 'right') {
-          // 向右滑动 = 快进
-          video.currentTime = Math.min(video.currentTime + skipTime, video.duration || video.currentTime);
-        } else {
-          // 向左滑动 = 快退
-          video.currentTime = Math.max(video.currentTime - skipTime, 0);
-        }
-        
-        // 显示快进/快退提示
-        showSwipeHint(swipeDirection, Math.round(skipTime));
-        
-        startX = currentX;
-        startY = currentY;
+      const screenWidth = window.innerWidth;
+      const ratio = Math.abs(deltaX) / screenWidth;
+      const skipTime = Math.min(ratio * 60, 30);
+      
+      if (swipeDirection === 'right') {
+        video.currentTime = Math.min(video.currentTime + skipTime, video.duration || video.currentTime);
+      } else {
+        video.currentTime = Math.max(video.currentTime - skipTime, 0);
       }
-    } else if (e.type === 'touchend') {
-      isSwiping = false;
+      
+      showSwipeHint(swipeDirection, Math.round(skipTime));
+      
+      startX = currentX;
+      startY = currentY;
     }
   };
   
-  playerArea._swipeHandler = handler;
-  playerArea.addEventListener('touchstart', handler, { passive: false });
-  playerArea.addEventListener('touchmove', handler, { passive: false });
-  playerArea.addEventListener('touchend', handler);
+  const handleTouchEnd = (e) => {
+    if (!hasMoved && isSwiping) {
+      const touch = e.changedTouches[0];
+      if (isTouchOutsideControls(touch.clientX, touch.clientY)) {
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    }
+    isSwiping = false;
+    hasMoved = false;
+  };
+  
+  playerArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+  playerArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+  playerArea.addEventListener('touchend', handleTouchEnd);
+  
+  playerArea._swipeHandler = { touchstart: handleTouchStart, touchmove: handleTouchMove, touchend: handleTouchEnd };
 }
 
 // 显示滑动快进提示
