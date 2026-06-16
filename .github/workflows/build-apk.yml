@@ -22,6 +22,10 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
+    - name: Make gradlew executable
+      working-directory: yunshao_android_source
+      run: chmod +x gradlew
+
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
