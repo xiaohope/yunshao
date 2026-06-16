@@ -240,6 +240,9 @@ function applyFullscreenCSS() {
     
     // 确保控制层始终在最上层
     controls.style.zIndex='2147483647';
+    
+    // 添加全屏滑动快进功能
+    addFullscreenSwipe(pa);
   }
   // 隐藏非播放器内容
   if (isTvPage) {
@@ -322,6 +325,96 @@ function removeFullscreenCSS() {
     const miniBar = document.getElementById('miniPlayerBar');
     if(miniBar) miniBar.style.display = '';
   }
+}
+
+// ==================== 全屏滑动快进功能 ====================
+function addFullscreenSwipe(playerArea) {
+  const video = playerArea.querySelector('video');
+  if (!video) return;
+  
+  let startX = 0, startY = 0;
+  let isSwiping = false;
+  let swipeDirection = '';
+  
+  // 移除旧的事件监听（如果有的话）
+  if (playerArea._swipeHandler) {
+    playerArea.removeEventListener('touchstart', playerArea._swipeHandler);
+    playerArea.removeEventListener('touchmove', playerArea._swipeHandler);
+    playerArea.removeEventListener('touchend', playerArea._swipeHandler);
+  }
+  
+  const handler = (e) => {
+    // 忽略点击控制按钮时的事件
+    if (e.target.closest('.fullscreen-controls') || e.target.closest('.player-info-overlay')) {
+      return;
+    }
+    
+    if (e.type === 'touchstart') {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isSwiping = true;
+      swipeDirection = '';
+    } else if (e.type === 'touchmove' && isSwiping) {
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const deltaX = currentX - startX;
+      const deltaY = currentY - startY;
+      
+      // 判断主要方向（水平滑动优先）
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+        swipeDirection = deltaX > 0 ? 'right' : 'left';
+        e.preventDefault();
+        
+        // 计算快进/快退时间（滑动距离的比例，最大30秒）
+        const screenWidth = window.innerWidth;
+        const ratio = Math.abs(deltaX) / screenWidth;
+        const skipTime = Math.min(ratio * 60, 30); // 最大快进30秒
+        
+        // 更新视频时间
+        if (swipeDirection === 'right') {
+          // 向右滑动 = 快进
+          video.currentTime = Math.min(video.currentTime + skipTime, video.duration || video.currentTime);
+        } else {
+          // 向左滑动 = 快退
+          video.currentTime = Math.max(video.currentTime - skipTime, 0);
+        }
+        
+        // 显示快进/快退提示
+        showSwipeHint(swipeDirection, Math.round(skipTime));
+        
+        startX = currentX;
+        startY = currentY;
+      }
+    } else if (e.type === 'touchend') {
+      isSwiping = false;
+    }
+  };
+  
+  playerArea._swipeHandler = handler;
+  playerArea.addEventListener('touchstart', handler, { passive: false });
+  playerArea.addEventListener('touchmove', handler, { passive: false });
+  playerArea.addEventListener('touchend', handler);
+}
+
+// 显示滑动快进提示
+function showSwipeHint(direction, seconds) {
+  let hint = document.getElementById('swipe-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'swipe-hint';
+    hint.className = 'swipe-hint';
+    document.body.appendChild(hint);
+  }
+  
+  hint.textContent = (direction === 'right' ? '快进' : '快退') + ' ' + seconds + '秒';
+  hint.style.display = 'block';
+  hint.classList.remove('fade-out');
+  
+  clearTimeout(hint._timer);
+  hint._timer = setTimeout(() => {
+    hint.classList.add('fade-out');
+    setTimeout(() => { hint.style.display = 'none'; }, 300);
+  }, 800);
 }
 
 // ==================== 视频比例切换 ====================
@@ -1776,9 +1869,6 @@ function loadProfileData(){
   const mf=document.getElementById('menuFav');if(mf)mf.textContent=fav.length?fav.length+'部':'';
   const mt=document.getElementById('menuTheme');if(mt)mt.textContent=document.body.classList.contains('theme-dark')?'深色':'浅色';
 
-  // 加载"继续观看"列表（只显示有进度的）
-  loadContinueWatch();
-
   // 加载历史列表 - 横向卡片
   const hlist=document.getElementById('historyList');
   if(hlist){
@@ -1810,43 +1900,6 @@ function loadProfileData(){
       </div>`;
     }).join('');
   }
-}
-
-// 加载继续观看列表
-function loadContinueWatch() {
-  const section = document.getElementById('continueWatchSection');
-  const list = document.getElementById('continueWatchList');
-  if (!section || !list) return;
-
-  const hist = getHistory().filter(v => v.progress > 0).slice(0, 6);
-  if (!hist.length) {
-    section.style.display = 'none';
-    return;
-  }
-
-  section.style.display = '';
-  list.innerHTML = hist.map((v, i) => {
-    const prog = v.progress || 0;
-    return `<div class="cw-item" onclick="resumeContinueWatch(${i})">
-      <div class="cw-poster">
-        <img src="${v.vod_pic||''}" loading="lazy" onerror="this.src='${noImg}'">
-        <div class="cw-progress"><div class="cw-progress-bar" style="width:${prog}%"></div></div>
-      </div>
-      <div class="cw-info">
-        <div class="cw-name">${v.vod_name||''}</div>
-        <div class="cw-episode">${v.episode||''} · 已看${prog}%</div>
-      </div>
-    </div>`;
-  }).join('');
-  window._continueWatchData = hist;
-}
-
-// 继续观看点击
-function resumeContinueWatch(idx) {
-  const v = window._continueWatchData && window._continueWatchData[idx];
-  if (!v) return;
-  window._resumeHistory = { sourceIdx: v.sourceIdx || 0, epIdx: v.epIdx || 0, currentTime: v.currentTime };
-  showDetail(v);
 }
 
 // 时间格式化
@@ -3267,7 +3320,7 @@ function playLiveChannel(name, url) {
   currentLiveChannel = { name, url };
 
   // 保存上次播放的频道
-  localStorage.setItem('ys_last_live_channel', JSON.stringify({ name, url, groupIdx: currentLiveGroupIdx, channelIdx: currentLiveChannelIdx }));
+  localStorage.setItem('ys_last_live_channel', JSON.stringify({ name, url, groupIdx: currentLiveGroupIdx, channelIdx: -1 }));
 
   const pa = document.getElementById('tvPlayerArea');
   // 清理之前的HLS和定时器
