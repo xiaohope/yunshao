@@ -1,0 +1,13 @@
+{
+  "tmdb_api_key": "9f0c7af18af62e07f67f2439942e5042",
+  "tmdb_base_url": "https://api.themoviedb.org/3",
+  "tmdb_image_base": "https://image.tmdb.org/t/p/w500",
+  "douban_api_base": "https://api.douban.com/v2",
+  "server_port": 8989,
+  "cache_ttl": {
+    "home": 300000,
+    "category": 180000,
+    "douban": 3600000,
+    "tmdb": 3600000
+  }
+}

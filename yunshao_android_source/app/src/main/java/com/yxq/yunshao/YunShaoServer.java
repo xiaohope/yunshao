@@ -75,9 +75,9 @@ public class YunShaoServer extends NanoHTTPD {
     private static final long DOUBAN_CACHE_TTL = 60 * 60 * 1000; // 豆瓣缓存1小时
 
     // ========== TMDB API配置 ==========
-    private static final String TMDB_API_KEY = "9f0c7af18af62e07f67f2439942e5042";
-    private static final String TMDB_BASE_URL = "https://api.themoviedb.org/3";
-    private static final String TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+    private String TMDB_API_KEY = "9f0c7af18af62e07f67f2439942e5042"; // 默认值，将从配置文件读取
+    private String TMDB_BASE_URL = "https://api.themoviedb.org/3";
+    private String TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
     private Map<String, String> tmdbCacheMap = new ConcurrentHashMap<>();
     private Map<String, Long> tmdbCacheTimeMap = new ConcurrentHashMap<>();
     private static final long TMDB_CACHE_TTL = 60 * 60 * 1000; // TMDB缓存1小时
@@ -85,7 +85,39 @@ public class YunShaoServer extends NanoHTTPD {
     public YunShaoServer(Context context) {
         super("127.0.0.1", 8989);
         this.context = context;
+        loadConfig();  // 从配置文件读取配置
         initSources();
+    }
+
+    /**
+     * 从 assets/config.json 读取配置（TMDB_API_KEY等）
+     */
+    private void loadConfig() {
+        try {
+            InputStream is = context.getAssets().open("config.json");
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            byte[] buf = new byte[1024];
+            int n;
+            while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
+            is.close();
+            String jsonStr = bos.toString("UTF-8");
+            JSONObject config = new JSONObject(jsonStr);
+            
+            // 读取 TMDB 配置
+            if (config.has("tmdb_api_key")) {
+                TMDB_API_KEY = config.getString("tmdb_api_key");
+            }
+            if (config.has("tmdb_base_url")) {
+                TMDB_BASE_URL = config.getString("tmdb_base_url");
+            }
+            if (config.has("tmdb_image_base")) {
+                TMDB_IMAGE_BASE = config.getString("tmdb_image_base");
+            }
+            
+            Log.d(TAG, "Config loaded from config.json");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load config.json, using defaults", e);
+        }
     }
 
     private void initSources() {
@@ -320,6 +352,8 @@ public class YunShaoServer extends NanoHTTPD {
         // 智能分类
         JSONArray hot = new JSONArray(), movie = new JSONArray(), tv = new JSONArray();
         JSONArray variety = new JSONArray(), anime = new JSONArray(), shorts = new JSONArray();
+        
+        int unclassifiedCount = 0; // 未分类计数
 
         for (int i = 0; i < allItems.length(); i++) {
             try {
@@ -327,37 +361,51 @@ public class YunShaoServer extends NanoHTTPD {
                 String typeName = item.optString("type_name", "").toLowerCase();
                 String cls = item.optString("vod_class", "").toLowerCase();
                 String vodName = item.optString("vod_name", "").toLowerCase();
+                String vodBlurb = item.optString("vod_blurb", "").toLowerCase(); // 添加简介字段
+                String vodActor = item.optString("vod_actor", "").toLowerCase(); // 演员字段
 
                 // 过滤足球/篮球相关视频（用户不需要）- 必须在加入hot之前过滤
-                if (vodName.contains("足球") || vodName.contains("篮球")) {
+                if (vodName.contains("足球") || vodName.contains("篮球") || 
+                    vodBlurb.contains("足球") || vodBlurb.contains("篮球")) {
                     continue;
                 }
 
                 if (hot.length() < 30) hot.put(item);
 
                 // 用type_name和vod_class共同判断分类（苹果CMS标准）
+                // 改进：添加更多匹配模式，并使用更宽松的匹配
                 boolean isAnime = typeName.contains("动漫") || typeName.contains("动画") || 
-                                  cls.contains("动漫") || cls.contains("动画");
+                                  cls.contains("动漫") || cls.contains("动画") ||
+                                  typeName.contains("卡通") || cls.contains("卡通");
+                
                 boolean isTV = false;
                 boolean isMovie = false;
                 boolean isVariety = typeName.contains("综艺") || typeName.contains("演唱") || typeName.contains("真人秀") ||
-                                   cls.contains("综艺") || cls.contains("演唱");
+                                   cls.contains("综艺") || cls.contains("演唱") ||
+                                   typeName.contains("脱口秀") || cls.contains("脱口秀") ||
+                                   typeName.contains("晚会") || cls.contains("晚会");
+                
                 boolean isShort = cls.contains("短剧") || typeName.contains("短剧") ||
                                   cls.contains("爽剧") || typeName.contains("爽剧") ||
                                   cls.contains("霸总") || typeName.contains("霸总") ||
                                   cls.contains("战神") || typeName.contains("战神") ||
                                   cls.contains("甜宠") || typeName.contains("甜宠") ||
-                                  cls.contains("赘婿") || typeName.contains("赘婿");
+                                  cls.contains("赘婿") || typeName.contains("赘婿") ||
+                                  cls.contains("重生") || typeName.contains("重生") ||
+                                  cls.contains("穿越") || typeName.contains("穿越");
                 
                 // 分类优先级：动漫 > 短剧 > 综艺 > 电视剧 > 电影
                 if (isAnime) {
                     // 动漫不放入其他分类
+                    if (anime.length() < 50) anime.put(item);
                 } else if (isShort) {
                     // 短剧单独归类，用于"短剧"Tab
                     if (shorts.length() < 50) shorts.put(item);
                 } else if (isVariety) {
                     // 综艺
-                } else if (typeName.contains("剧") || cls.contains("剧")) {
+                    if (variety.length() < 50) variety.put(item);
+                } else if (typeName.contains("剧") || cls.contains("剧") || 
+                           typeName.contains("连续剧") || cls.contains("连续剧")) {
                     // 电视剧（包含"剧"但不是"动画片"或"XX片"）
                     // 但如果是"喜剧片""动作片"等明确电影类型，还是归电影
                     if (typeName.contains("动作片") || typeName.contains("喜剧片") || typeName.contains("爱情片") ||
@@ -369,22 +417,38 @@ public class YunShaoServer extends NanoHTTPD {
                     } else {
                         isTV = true;
                     }
+                } else if (typeName.contains("电影") || typeName.contains("片") || 
+                           typeName.contains("影") || cls.contains("电影") ||
+                           cls.contains("影院") || cls.contains("院线")) {
+                    // 改进：添加更多电影相关关键词
+                    isMovie = true;
                 } else if (typeName.contains("动作") || typeName.contains("喜剧") || typeName.contains("爱情") ||
                         typeName.contains("科幻") || typeName.contains("恐怖") || typeName.contains("剧情") ||
-                        typeName.contains("纪录") || typeName.contains("战争") || typeName.contains("电影") ||
+                        typeName.contains("纪录") || typeName.contains("战争") || 
                         typeName.contains("4k") || typeName.contains("蓝光") ||
                         typeName.contains("冒险") || typeName.contains("悬疑") || typeName.contains("奇幻") ||
                         typeName.contains("惊悚") || typeName.contains("犯罪") || typeName.contains("武侠") ||
                         typeName.contains("古装") || typeName.contains("传记") || typeName.contains("歌舞") ||
-                        typeName.contains("情色") || typeName.contains("伦理")) {
+                        typeName.contains("情色") || typeName.contains("伦理") ||
+                        typeName.contains("恐怖") || typeName.contains("惊悚")) {
                     isMovie = true;
                 } else {
-                    // 剩余未分类按轮询分配
-                    int idx = i % 4;
-                    if (idx == 0 && movie.length() < 50) movie.put(item);
-                    else if (idx == 1 && tv.length() < 50) tv.put(item);
-                    else if (idx == 2 && variety.length() < 50) variety.put(item);
-                    else if (anime.length() < 50) anime.put(item);
+                    // 改进：尝试从 vod_name 推断类型
+                    if (vodName.contains("电影") || vodName.contains("院线") || 
+                        vodName.contains("影院") || vodName.contains("film")) {
+                        isMovie = true;
+                    } else if (vodName.contains("电视剧") || vodName.contains("剧集") ||
+                               vodName.contains("连续剧") || vodName.contains("tv series")) {
+                        isTV = true;
+                    } else {
+                        // 剩余未分类按轮询分配
+                        unclassifiedCount++;
+                        int idx = i % 4;
+                        if (idx == 0 && movie.length() < 50) movie.put(item);
+                        else if (idx == 1 && tv.length() < 50) tv.put(item);
+                        else if (idx == 2 && variety.length() < 50) variety.put(item);
+                        else if (anime.length() < 50) anime.put(item);
+                    }
                 }
                 
                 // 分配到对应分类
@@ -392,8 +456,48 @@ public class YunShaoServer extends NanoHTTPD {
                 else if (isTV && tv.length() < 50) tv.put(item);
                 else if (isVariety && variety.length() < 50) variety.put(item);
                 else if (isAnime && anime.length() < 50) anime.put(item);
-            } catch (Exception e) {}
+                
+            } catch (Exception e) {
+                Log.e(TAG, "分类错误: " + e.getMessage());
+            }
         }
+        
+        // 改进：如果 movie 或 tv 仍然为空，从 hot 中分配一些数据
+        if (movie.length() == 0 && hot.length() > 5) {
+            Log.w(TAG, "movie 为空，从 hot 中分配数据");
+            for (int i = 0; i < Math.min(hot.length(), 10); i++) {
+                try {
+                    JSONObject item = hot.getJSONObject(i);
+                    // 尝试判断是否为电影
+                    String typeName = item.optString("type_name", "").toLowerCase();
+                    if (!typeName.contains("剧") && !typeName.contains("综艺") && 
+                        !typeName.contains("动漫")) {
+                        movie.put(item);
+                        if (movie.length() >= 6) break;
+                    }
+                } catch (Exception e) {}
+            }
+        }
+        
+        if (tv.length() == 0 && hot.length() > 5) {
+            Log.w(TAG, "tv 为空，从 hot 中分配数据");
+            for (int i = 0; i < Math.min(hot.length(), 10); i++) {
+                try {
+                    JSONObject item = hot.getJSONObject(i);
+                    // 尝试判断是否为电视剧
+                    String typeName = item.optString("type_name", "").toLowerCase();
+                    if (typeName.contains("剧") || typeName.contains("连续")) {
+                        tv.put(item);
+                        if (tv.length() >= 6) break;
+                    }
+                } catch (Exception e) {}
+            }
+        }
+        
+        Log.d(TAG, "分类统计: hot=" + hot.length() + " movie=" + movie.length() + 
+                    " tv=" + tv.length() + " variety=" + variety.length() + 
+                    " anime=" + anime.length() + " shorts=" + shorts.length() + 
+                    " 未分类=" + unclassifiedCount);
 
         // 过滤无海报、太老的视频，保留2021年至今
         int currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR);

@@ -60,6 +60,21 @@ let isPlaying = false;
 
 function showToast(m) { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
 
+// 占位图生成函数，支持不同比例
+function getNoImgSvg(width = 120, height = 180) {
+  const bg = '#2a2a3e';
+  const icon = '#555';
+  const text = '#666';
+  return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
+    <rect fill="${bg}" width="${width}" height="${height}" rx="8"/>
+    <rect x="${width*0.3}" y="${height*0.35}" width="${width*0.4}" height="${height*0.06}" rx="2" fill="${icon}"/>
+    <rect x="${width*0.25}" y="${height*0.45}" width="${width*0.5}" height="${height*0.04}" rx="2" fill="${icon}"/>
+    <polygon points="${width*0.38},${height*0.6} ${width*0.55},${height*0.7} ${width*0.38},${height*0.8}" fill="${icon}"/>
+    <text x="${width*0.5}" y="${height*0.92}" text-anchor="middle" fill="${text}" font-size="${Math.max(10, width*0.1)}" font-family="sans-serif">暂无封面</text>
+  </svg>`)}`;
+}
+const noImg = getNoImgSvg(120, 180);
+
 // ==================== 骨架屏生成 ====================
 function createSkeletonCards(count, isScroll) {
   const cards = [];
@@ -90,6 +105,12 @@ function showPage(pid) {
   document.querySelectorAll('.side-nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===pid));
   const nav=document.getElementById('bottomNav');
   if(nav) nav.style.display=(pid==='detailPage'||pid==='searchPage')?'none':'';
+  
+  // 返回首页时清除搜索输入框
+  if(pid==='homePage'){
+    const si=document.getElementById('searchInput');if(si)si.value='';
+    const sf=document.getElementById('searchInputFull');if(sf)sf.value='';
+  }
   
   // 进入历史/收藏/个人页时刷新数据
   if(pid==='historyPage'||pid==='favPage'||pid==='profilePage') loadProfileData();
@@ -225,6 +246,9 @@ function applyFullscreenCSS() {
     
     // 确保控制层始终在最上层
     controls.style.zIndex='2147483647';
+    
+    // 添加全屏滑动快进功能
+    addFullscreenSwipe(pa);
   }
   // 隐藏非播放器内容
   if (isTvPage) {
@@ -260,6 +284,13 @@ function removeFullscreenCSS() {
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
+    // 移除滑动快进事件监听
+    if (pa._swipeHandler) {
+      pa.removeEventListener('touchstart', pa._swipeHandler.touchstart);
+      pa.removeEventListener('touchmove', pa._swipeHandler.touchmove);
+      pa.removeEventListener('touchend', pa._swipeHandler.touchend);
+      delete pa._swipeHandler;
+    }
     // 恢复自定义全屏按钮
     const fsBtn=pa.querySelector('.video-fs-btn');
     if(fsBtn) fsBtn.style.display='';
@@ -307,6 +338,114 @@ function removeFullscreenCSS() {
     const miniBar = document.getElementById('miniPlayerBar');
     if(miniBar) miniBar.style.display = '';
   }
+}
+
+// ==================== 全屏滑动快进功能 ====================
+function addFullscreenSwipe(playerArea) {
+  const video = playerArea.querySelector('video');
+  if (!video) return;
+  
+  let startX = 0, startY = 0;
+  let isSwiping = false;
+  let swipeDirection = '';
+  let hasMoved = false;
+  
+  const isTouchOutsideControls = (clientX, clientY) => {
+    const controls = playerArea.querySelector('.fullscreen-controls');
+    if (controls) {
+      const rect = controls.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+        return false;
+      }
+    }
+    return true;
+  };
+  
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    if (!isTouchOutsideControls(touch.clientX, touch.clientY)) return;
+    
+    startX = touch.clientX;
+    startY = touch.clientY;
+    isSwiping = true;
+    hasMoved = false;
+    swipeDirection = '';
+  };
+  
+  const handleTouchMove = (e) => {
+    if (!isSwiping) return;
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+    const deltaX = currentX - startX;
+    const deltaY = currentY - startY;
+    
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      hasMoved = true;
+    }
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+      swipeDirection = deltaX > 0 ? 'right' : 'left';
+      e.preventDefault();
+      
+      const screenWidth = window.innerWidth;
+      const ratio = Math.abs(deltaX) / screenWidth;
+      const skipTime = Math.min(ratio * 60, 30);
+      
+      if (swipeDirection === 'right') {
+        video.currentTime = Math.min(video.currentTime + skipTime, video.duration || video.currentTime);
+      } else {
+        video.currentTime = Math.max(video.currentTime - skipTime, 0);
+      }
+      
+      showSwipeHint(swipeDirection, Math.round(skipTime));
+      
+      startX = currentX;
+      startY = currentY;
+    }
+  };
+  
+  const handleTouchEnd = (e) => {
+    if (!hasMoved && isSwiping) {
+      const touch = e.changedTouches[0];
+      if (isTouchOutsideControls(touch.clientX, touch.clientY)) {
+        if (video.paused) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      }
+    }
+    isSwiping = false;
+    hasMoved = false;
+  };
+  
+  playerArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+  playerArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+  playerArea.addEventListener('touchend', handleTouchEnd);
+  
+  playerArea._swipeHandler = { touchstart: handleTouchStart, touchmove: handleTouchMove, touchend: handleTouchEnd };
+}
+
+// 显示滑动快进提示
+function showSwipeHint(direction, seconds) {
+  let hint = document.getElementById('swipe-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'swipe-hint';
+    hint.className = 'swipe-hint';
+    document.body.appendChild(hint);
+  }
+  
+  hint.textContent = (direction === 'right' ? '快进' : '快退') + ' ' + seconds + '秒';
+  hint.style.display = 'block';
+  hint.classList.remove('fade-out');
+  
+  clearTimeout(hint._timer);
+  hint._timer = setTimeout(() => {
+    hint.classList.add('fade-out');
+    setTimeout(() => { hint.style.display = 'none'; }, 300);
+  }, 800);
 }
 
 // ==================== 视频比例切换 ====================
@@ -407,6 +546,42 @@ async function fetchAndRenderHome(){
     if (!data || data.error) {
       await new Promise(r => setTimeout(r, 500));
       data = await apiFetch(`${API}/api/home`, 20000);
+    }
+    
+    // 改进：如果 movie 或 tv 为空，尝试从分类API获取数据
+    if (data && !data.error) {
+      const fallbackFetches = [];
+      
+      // 如果 movie 为空，从分类API获取
+      if (!data.movie || data.movie.length === 0) {
+        console.log('movie 为空，从分类API获取');
+        fallbackFetches.push(
+          apiFetch(`${API}/api/category?type=1&pg=1`).then(result => {
+            if (result && result.list && result.list.length > 0) {
+              data.movie = result.list.slice(0, 12);
+              console.log('从分类API获取到 ' + data.movie.length + ' 条电影数据');
+            }
+          }).catch(e => console.error('获取电影数据失败:', e))
+        );
+      }
+      
+      // 如果 tv 为空，从分类API获取
+      if (!data.tv || data.tv.length === 0) {
+        console.log('tv 为空，从分类API获取');
+        fallbackFetches.push(
+          apiFetch(`${API}/api/category?type=2&pg=1`).then(result => {
+            if (result && result.list && result.list.length > 0) {
+              data.tv = result.list.slice(0, 12);
+              console.log('从分类API获取到 ' + data.tv.length + ' 条电视剧数据');
+            }
+          }).catch(e => console.error('获取电视剧数据失败:', e))
+        );
+      }
+      
+      // 等待所有fallback请求完成
+      if (fallbackFetches.length > 0) {
+        await Promise.all(fallbackFetches);
+      }
     }
   }
   if(data && !data.error && (data.hot || data.movie || data.tv)){
@@ -513,8 +688,6 @@ async function loadShortDramas() {
   else el.innerHTML='<div class="loading-placeholder error">暂无</div>';
 }
 
-const noImg="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 60%22><rect fill=%22%232a2a3e%22 width=%2240%22 height=%2260%22 rx=%224%22/><path d=%22M16 20h8v4h-8zm-2 6h12v18l-6-4-6 4z%22 fill=%22%23444%22/><text x=%2220%22 y=%2256%22 fill=%22%23555%22 font-size=%226%22 text-anchor=%22middle%22>暂无封面</text></svg>";
-
 // 全局视频数据缓存（避免JSON嵌入HTML的编码问题）
 window._vodData = window._vodData || {};
 
@@ -535,7 +708,7 @@ function createCatCard(v) {
 }
 
 function bindCardClicks() {
-  document.querySelectorAll('.video-card,.cat-card').forEach(c=>{c.onclick=()=>{try{const v=window._vodData[c.dataset.vid];if(v)searchAndPlay(v.vod_name);}catch(e){}};});
+  document.querySelectorAll('.video-card,.cat-card').forEach(c=>{c.onclick=()=>{try{const v=window._vodData[c.dataset.vid];if(v)showDetail(v);}catch(e){}};});
 }
 
 // ==================== Tab切换 ====================
@@ -751,7 +924,7 @@ async function loadCatPageTabData(typeId) {
   const moreBtn = document.getElementById('catPageMore_'+typeId);
   const isFirstPage = state.page === 1;
   if(isFirstPage) listView.innerHTML = createSkeletonList(6);
-  if(moreBtn) moreBtn.textContent = '加载中...';
+  if(moreBtn) moreBtn.innerHTML='<span class="loading-spinner"></span>加载中';
   
   let data = null;
   // 先尝试后端API，使用smart=1参数（后端全量取+智能分类）
@@ -792,7 +965,7 @@ async function loadCatPageTabData(typeId) {
       div.className = 'cat-list-item';
       div.dataset.vod = JSON.stringify(v).replace(/'/g,"&#39;");
       div.innerHTML = `<div class="cat-list-cover"><img src="${v.vod_pic||''}" alt="" loading="lazy" onerror="this.src='${noImg}'"><span class="cat-list-rank ${rank<=3?'top':''}">${rank}</span></div><div class="cat-list-info"><div class="cat-list-title">${v.vod_name||''}</div><div class="cat-list-meta">${metaItems.join('')}</div>${tags.length?`<div class="cat-list-tags">${tags.map(t=>`<span class="cat-list-tag-item">${t}</span>`).join('')}</div>`:''}</div>`;
-      div.onclick = ()=>{try{const v=JSON.parse(div.dataset.vod);searchAndPlay(v.vod_name);}catch(e){}};
+      div.onclick = ()=>{try{const v=JSON.parse(div.dataset.vod);showDetail(v);}catch(e){}};
       frag.appendChild(div);
     });
     listView.appendChild(frag);
@@ -902,7 +1075,7 @@ function renderCatList(list,container){
       </div>
     </div>`;
   }).join('');
-  container.querySelectorAll('.cat-list-item').forEach(item=>{item.onclick=()=>{try{const v=window._vodData[item.dataset.vid];if(v)searchAndPlay(v.vod_name);}catch(e){}};});
+  container.querySelectorAll('.cat-list-item').forEach(item=>{item.onclick=()=>{try{const v=window._vodData[item.dataset.vid];if(v)showDetail(v);}catch(e){}};});
 }
 
 // 渲染分类页网格视图
@@ -918,7 +1091,7 @@ function renderCatGrid(list,container){
       <div class="cat-grid-info"><div class="cat-grid-title">${v.vod_name||''}</div><div class="cat-grid-meta"><span class="rating">${v.vod_score?'⭐ '+v.vod_score:''}</span><span>${v.vod_year||''}</span></div></div>
     </div>`;
   }).join('');
-  container.querySelectorAll('.cat-grid-card').forEach(card=>{card.onclick=()=>{try{const v=window._vodData[card.dataset.vid];if(v)searchAndPlay(v.vod_name);}catch(e){}};});
+  container.querySelectorAll('.cat-grid-card').forEach(card=>{card.onclick=()=>{try{const v=window._vodData[card.dataset.vid];if(v)showDetail(v);}catch(e){}};});
 }
 
 // ==================== 旧版分类页（保留向后兼容） ====================
@@ -928,7 +1101,7 @@ async function loadCategoryData() {
   const grid=document.getElementById('categoryGrid');
   if(categoryState.page===1) grid.innerHTML=createSkeletonCards(9,false);
   const moreBtn=document.getElementById('loadMoreBtn');
-  if(moreBtn) moreBtn.textContent='加载中...';
+  if(moreBtn) moreBtn.innerHTML='<span class="loading-spinner"></span>加载中';
   const data=await apiFetch(`${API}/api/category?type=${categoryState.typeId}&pg=${categoryState.page}&smart=1`);
   if(data&&data.list&&data.list.length){
     if(categoryState.page===1) grid.innerHTML='';
@@ -944,6 +1117,11 @@ async function loadCategoryData() {
   categoryState.loading=false;
 }
 function loadMoreCategory(){if(categoryState.hasMore&&!categoryState.loading){categoryState.page++;loadCategoryData();}}
+
+// 加载中提示HTML
+function getLoadingHtml(text = '加载中') {
+  return `<div class="loading-text" style="text-align:center;padding:40px"><span class="loading-spinner loading-spinner-large"></span>${text}</div>`;
+}
 
 // 滚动加载：监听每个首页Tab面板的滚动
 Object.entries(tabPanelMap).forEach(([tabName,panelId])=>{
@@ -1504,7 +1682,11 @@ function openSearchPage() {
   document.getElementById('searchResultSection').style.display='none';
   renderSearchHistory();
   renderHotSearch();
-  setTimeout(()=>document.getElementById('searchInputFull')?.focus(),100);
+  // 延迟聚焦并尝试调起键盘
+  setTimeout(()=>{
+    const input = document.getElementById('searchInputFull');
+    if(input){ input.focus(); }
+  }, 200);
 }
 
 // 点击视频卡 → 跳搜索页搜索视频名，跨所有源查找
@@ -1731,8 +1913,11 @@ function toggleFavorite(){
   if(!currentVideo)return;
   const f=getFavorites();
   const i=f.findIndex(x=>x.vod_id===currentVideo.vod_id&&x.source_id===currentVideo.source_id);
-  if(i>=0){f.splice(i,1);showToast('已取消收藏');}else{f.unshift({vod_id:currentVideo.vod_id,vod_name:currentVideo.vod_name,vod_pic:currentVideo.vod_pic,source_id:currentVideo.source_id,source_name:currentVideo.source_name});showToast('已收藏');}
+  const detailBtn=document.getElementById('detailFavBtn');
+  if(i>=0){f.splice(i,1);showToast('已取消收藏');}else{f.unshift({vod_id:currentVideo.vod_id,vod_name:currentVideo.vod_name,vod_pic:currentVideo.vod_pic,source_id:currentVideo.source_id,source_name:currentVideo.source_name});showToast('已收藏 ★');}
   saveFavorites(f);
+  // 触发动画
+  if(detailBtn){detailBtn.classList.remove('fav-animate');void detailBtn.offsetWidth;detailBtn.classList.add('fav-animate');}
   if(typeof updateDetailFavBtn==='function') updateDetailFavBtn();
   if(typeof updateInfoFavBtn==='function') updateInfoFavBtn();
 }
@@ -1750,7 +1935,7 @@ function loadProfileData(){
   const mh=document.getElementById('menuHistory');if(mh)mh.textContent=hist.length?hist.length+'部':'';
   const mf=document.getElementById('menuFav');if(mf)mf.textContent=fav.length?fav.length+'部':'';
   const mt=document.getElementById('menuTheme');if(mt)mt.textContent=document.body.classList.contains('theme-dark')?'深色':'浅色';
-  
+
   // 加载历史列表 - 横向卡片
   const hlist=document.getElementById('historyList');
   if(hlist){
@@ -1768,7 +1953,7 @@ function loadProfileData(){
       </div>`;
     }).join('');
   }
-  
+
   // 加载收藏列表 - 横向卡片
   const flist=document.getElementById('favList');
   if(flist){
@@ -2345,13 +2530,18 @@ function showAboutPage(){
 // ==================== 主题 ====================
 function toggleTheme(){
   const d=!document.body.classList.contains('theme-dark');
+  // 添加过渡类
+  document.documentElement.classList.add('theme-transition');
   document.body.classList.toggle('theme-dark',d);
+  document.documentElement.classList.toggle('theme-dark',d);
   localStorage.setItem('ys_theme',d?'dark':'light');
   if(window.YunShaoNative&&typeof YunShaoNative.updateStatusBar==='function')YunShaoNative.updateStatusBar(d);
   // 更新"我的"页面的主题显示
   const mt=document.getElementById('menuTheme');
   if(mt) mt.textContent=d?'深色':'浅色';
   showToast(d?'深色模式':'浅色模式');
+  // 移除过渡类
+  setTimeout(()=>document.documentElement.classList.remove('theme-transition'),350);
 }
 
 // ==================== 布局切换 ====================
@@ -2529,7 +2719,7 @@ document.querySelectorAll('#catQuickFilterScroll .qf-item').forEach(item=>{
           (tags.length?`<div class="cat-list-tags">${tags.map(t=>`<span class="cat-list-tag-item">${t}</span>`).join('')}</div>`:'')+
           `</div></div>`;
       }).join('');
-      listView.querySelectorAll('.cat-list-item').forEach(el=>{el.onclick=()=>{try{const v=window._vodData[el.dataset.vid];if(v)searchAndPlay(v.vod_name);}catch(e){}};});
+      listView.querySelectorAll('.cat-list-item').forEach(el=>{el.onclick=()=>{try{const v=window._vodData[el.dataset.vid];if(v)showDetail(v);}catch(e){}};});
     }
   });
 });
@@ -3125,11 +3315,47 @@ function parseM3U(text) {
 function renderTvChannels() {
   const tabsEl = document.getElementById('tvGroupScroll');
   if (tabsEl) {
-    tabsEl.innerHTML = currentLiveGroups.map((g, i) => 
+    tabsEl.innerHTML = currentLiveGroups.map((g, i) =>
       '<span class="tv-group-tab ' + (i === currentLiveGroupIdx ? 'active' : '') + '" onclick="switchLiveGroup(' + i + ')">' + g.name + '</span>'
     ).join('');
   }
   renderLiveChannelList(currentLiveGroups[currentLiveGroupIdx]?.channels || []);
+
+  // 检查并恢复上次播放的频道
+  const lastChannelStr = localStorage.getItem('ys_last_live_channel');
+  if (lastChannelStr) {
+    try {
+      const lastChannel = JSON.parse(lastChannelStr);
+      // 如果上次频道在当前列表中，自动播放
+      if (lastChannel && lastChannel.name && lastChannel.url) {
+        // 先尝试在上次所在的组查找
+        const lastGroup = currentLiveGroups[lastChannel.groupIdx];
+        if (lastGroup) {
+          const ch = lastGroup.channels.find(c => c.name === lastChannel.name && c.url === lastChannel.url);
+          if (ch) {
+            currentLiveGroupIdx = lastChannel.groupIdx;
+            // 更新tab高亮
+            document.querySelectorAll('.tv-group-tab').forEach((t, i) => t.classList.toggle('active', i === lastChannel.groupIdx));
+            renderLiveChannelList(lastGroup.channels);
+            playLiveChannel(ch.name, ch.url);
+            return;
+          }
+        }
+        // 如果不在上次的组，在所有组中搜索
+        for (let i = 0; i < currentLiveGroups.length; i++) {
+          if (i === lastChannel.groupIdx) continue;
+          const ch = currentLiveGroups[i].channels.find(c => c.name === lastChannel.name && c.url === lastChannel.url);
+          if (ch) {
+            currentLiveGroupIdx = i;
+            document.querySelectorAll('.tv-group-tab').forEach((t, j) => t.classList.toggle('active', j === i));
+            renderLiveChannelList(currentLiveGroups[i].channels);
+            playLiveChannel(ch.name, ch.url);
+            return;
+          }
+        }
+      }
+    } catch(e) {}
+  }
 }
 
 function switchLiveGroup(idx) {
@@ -3159,7 +3385,10 @@ function renderLiveChannelList(channels) {
 
 function playLiveChannel(name, url) {
   currentLiveChannel = { name, url };
-  
+
+  // 保存上次播放的频道
+  localStorage.setItem('ys_last_live_channel', JSON.stringify({ name, url, groupIdx: currentLiveGroupIdx, channelIdx: -1 }));
+
   const pa = document.getElementById('tvPlayerArea');
   // 清理之前的HLS和定时器
   if (tvHls) { tvHls.destroy(); tvHls = null; }
@@ -3748,9 +3977,14 @@ function toggleDetailFav() {
   if(!currentVideo) return;
   const f=getFavorites();
   const i=f.findIndex(x=>x.vod_id===currentVideo.vod_id&&x.source_id===currentVideo.source_id);
+  const infoBtn=document.getElementById('infoFavBtn');
+  const detailBtn=document.getElementById('detailFavBtn');
   if(i>=0){f.splice(i,1);showToast('已取消收藏');}
-  else{f.unshift({vod_id:currentVideo.vod_id,vod_name:currentVideo.vod_name||currentVideo.title||'',vod_pic:currentVideo.vod_pic||(currentVideo.cover||''),source_id:currentVideo.source_id||'',source_name:currentVideo.source_name||'',douban_id:currentVideo.douban_id});showToast('已收藏');}
+  else{f.unshift({vod_id:currentVideo.vod_id,vod_name:currentVideo.vod_name||currentVideo.title||'',vod_pic:currentVideo.vod_pic||(currentVideo.cover||''),source_id:currentVideo.source_id||'',source_name:currentVideo.source_name||'',douban_id:currentVideo.douban_id});showToast('已收藏 ★');}
   saveFavorites(f);
+  // 触发动画
+  if(infoBtn){infoBtn.classList.remove('fav-animate');void infoBtn.offsetWidth;infoBtn.classList.add('fav-animate');}
+  if(detailBtn){detailBtn.classList.remove('fav-animate');void detailBtn.offsetWidth;detailBtn.classList.add('fav-animate');}
   updateDetailFavBtn();
   updateInfoFavBtn();
 }

@@ -547,6 +547,42 @@ async function fetchAndRenderHome(){
       await new Promise(r => setTimeout(r, 500));
       data = await apiFetch(`${API}/api/home`, 20000);
     }
+    
+    // 改进：如果 movie 或 tv 为空，尝试从分类API获取数据
+    if (data && !data.error) {
+      const fallbackFetches = [];
+      
+      // 如果 movie 为空，从分类API获取
+      if (!data.movie || data.movie.length === 0) {
+        console.log('movie 为空，从分类API获取');
+        fallbackFetches.push(
+          apiFetch(`${API}/api/category?type=1&pg=1`).then(result => {
+            if (result && result.list && result.list.length > 0) {
+              data.movie = result.list.slice(0, 12);
+              console.log('从分类API获取到 ' + data.movie.length + ' 条电影数据');
+            }
+          }).catch(e => console.error('获取电影数据失败:', e))
+        );
+      }
+      
+      // 如果 tv 为空，从分类API获取
+      if (!data.tv || data.tv.length === 0) {
+        console.log('tv 为空，从分类API获取');
+        fallbackFetches.push(
+          apiFetch(`${API}/api/category?type=2&pg=1`).then(result => {
+            if (result && result.list && result.list.length > 0) {
+              data.tv = result.list.slice(0, 12);
+              console.log('从分类API获取到 ' + data.tv.length + ' 条电视剧数据');
+            }
+          }).catch(e => console.error('获取电视剧数据失败:', e))
+        );
+      }
+      
+      // 等待所有fallback请求完成
+      if (fallbackFetches.length > 0) {
+        await Promise.all(fallbackFetches);
+      }
+    }
   }
   if(data && !data.error && (data.hot || data.movie || data.tv)){
     homeDataCache=data;

@@ -441,10 +441,10 @@ class YunShaoHandler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     server = http.server.HTTPServer(('0.0.0.0', PORT), YunShaoHandler)
-    print(f"\n🚀 云梢桌面测试服务器启动于 http://localhost:{PORT}")
-    print(f"   📂 静态文件: {os.getcwd()}")
-    print(f"   🔄 API 代理已开启（绕过 CORS）")
-    print(f"   ⏹  按 Ctrl+C 停止\n")
+    print(f"\n[*] YunShao test server started on http://localhost:{PORT}")
+    print(f"    Static files dir: {os.getcwd()}")
+    print(f"    API proxy enabled (CORS bypass)")
+    print(f"    Press Ctrl+C to stop\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
