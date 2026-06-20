@@ -37,11 +37,7 @@ body.is-widescreen .side-nav {
   transition: width 0.2s;
   overflow: hidden;
 }
-/* hover展开时浮动覆盖，不影响内容区 */
-body.is-widescreen .side-nav:hover {
-  width: 180px;
-  box-shadow: 4px 0 16px rgba(0,0,0,0.15);
-}
+/* 侧边栏固定宽度，不展开（触摸设备上hover会遮挡内容） */
 body.is-widescreen .page {
   display: none !important;
   background: var(--bg-primary, #F0F2F7) !important;
@@ -140,9 +136,7 @@ body.layout-narrow .page.active {
     border-right: 1px solid #e2e8f0;
   }
 
-  .side-nav:hover {
-    width: 180px;
-  }
+  /* 侧边栏固定72px，不展开 */
 
   .side-nav-logo {
     width: 44px;
@@ -209,12 +203,7 @@ body.layout-narrow .page.active {
   .side-nav-item .nav-text {
     font-size: 14px;
     font-weight: 500;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .side-nav:hover .side-nav-item .nav-text {
-    opacity: 1;
+    display: none; /* 侧边栏不展开，文字永远隐藏 */
   }
 
   .side-nav-item .badge {
@@ -226,15 +215,10 @@ body.layout-narrow .page.active {
     border-radius: 10px;
     min-width: 18px;
     text-align: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    display: none; /* 侧边栏不展开，badge隐藏 */
   }
 
-  .side-nav:hover .side-nav-item .badge {
-    opacity: 1;
-  }
-
-  /* 底部工具栏 */
+  /* 底部工具栏 - 固定不展开 */
   .side-nav-footer {
     padding: 12px 8px;
     width: 100%;
@@ -246,6 +230,9 @@ body.layout-narrow .page.active {
     overflow: visible !important;
     padding: 12px 0 !important;
     gap: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   .side-nav-footer .side-nav-item .nav-icon {
@@ -260,21 +247,7 @@ body.layout-narrow .page.active {
   }
 
   .side-nav-footer .side-nav-item .nav-text {
-    display: none !important;
-  }
-
-  .side-nav:hover .side-nav-footer .side-nav-item .nav-text {
-    display: inline !important;
-  }
-
-  .side-nav:hover .side-nav-footer .side-nav-item {
-    justify-content: flex-start !important;
-    gap: 12px !important;
-  }
-
-  .side-nav:hover .side-nav-footer .side-nav-item .nav-icon {
-    width: auto !important;
-    margin: 0 !important;
+    display: none !important; /* 始终隐藏文字 */
   }
 
   /* ============================================
@@ -434,6 +407,12 @@ body.layout-narrow .page.active {
   /* 桌面版：隐藏热门推荐横版banner，直接显示卡片 */
   #homePage #hotBanner {
     display: none !important;
+  }
+
+  /* 横版：section-card减小内边距，释放更多空间给网格 */
+  .section-card {
+    margin: 8px 8px !important;
+    padding: 10px 8px !important;
   }
 
   /* 桌面版热门推荐5列 */
@@ -944,12 +923,36 @@ body.layout-narrow .page.active {
     gap: 12px !important;
   }
 
-  /* 视频卡片横版适配 */
+  /* 视频卡片横版适配 - 更紧凑 */
   .video-card {
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
+    flex: none !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  
+  /* 横版视频卡片-海报略缩小 */
+  .video-card-poster {
+    aspect-ratio: 3/4.5 !important;
+    border-radius: 8px !important;
+  }
+  
+  /* 横版视频卡片-标题缩小 */
+  .video-card-title {
+    font-size: 11px !important;
+    margin-top: 4px !important;
+  }
+  
+  /* 横版视频卡片-元数据缩小 */
+  .video-card-meta {
+    font-size: 9px !important;
+  }
+  
+  /* 横版视频卡片-评分缩小 */
+  .video-card-rating {
+    font-size: 9px !important;
+    padding: 1px 4px !important;
   }
 
   .video-card:hover {
@@ -1057,9 +1060,7 @@ body.layout-narrow .page.active {
       width: 80px;
     }
 
-    .side-nav:hover {
-      width: 200px;
-    }
+    /* 侧边栏固定不展开 */
 
     /* 页面容器 - 只对活动页面生效 */
     .page.active {
@@ -1088,9 +1089,7 @@ body.layout-narrow .page.active {
       width: 88px;
     }
 
-    .side-nav:hover {
-      width: 220px;
-    }
+    /* 侧边栏固定不展开 */
 
     .page {
       padding-left: 88px !important;

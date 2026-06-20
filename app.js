@@ -2854,8 +2854,8 @@ function initPullRefresh(){
     panel.addEventListener('touchmove',e=>{
       if(!pulling) return;
       const dy=e.touches[0].clientY-startY;
-      if(dy>60&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↑ 释放刷新';}
-      else if(dy>20&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↓ 下拉刷新';}
+      if(dy>100&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↑ 释放刷新';}
+      else if(dy>60&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↓ 下拉刷新';}
       else{indicator.style.display='none';}
     },{passive:true});
 
@@ -2910,8 +2910,8 @@ function initCatPagePullRefresh(){
     panel.addEventListener('touchmove',e=>{
       if(!pulling) return;
       const dy=e.touches[0].clientY-startY;
-      if(dy>60&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↑ 释放刷新';}
-      else if(dy>20&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↓ 下拉刷新';}
+      if(dy>100&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↑ 释放刷新';}
+      else if(dy>60&&panel.scrollTop<=0){indicator.style.display='block';indicator.textContent='↓ 下拉刷新';}
       else{indicator.style.display='none';}
     },{passive:true});
 
