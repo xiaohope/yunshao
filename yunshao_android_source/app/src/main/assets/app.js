@@ -3858,17 +3858,39 @@ async function openPlayPage(v) {
     fetchOtherSources(v.vod_name);
     updateFavBtn();
   } else {
-    // 搜索播放源
+    // 没有播放源信息，通过详情接口获取（首页/分类页列表数据被后端strip了vod_play_url）
     try {
-      let dd=null,matchedVod=null;
-      if(v.source_url) { try{dd=await apiFetch(`${API}/api/search/source?url=${encodeURIComponent(v.source_url)}&wd=${encodeURIComponent(v.vod_name)}`,15000);}catch(e){} }
-      if(dd&&dd.list&&dd.list.length) { matchedVod=dd.list.find(d=>d.vod_name===v.vod_name); if(!matchedVod)matchedVod=dd.list[0]; }
-      if(!matchedVod&&v.source_id) {
+      let matchedVod=null;
+      // 优先用 /api/video/detail 接口（通过 source_id + vod_id 直接获取详情，最快最准）
+      if(v.source_id && v.vod_id) {
         try {
-          const sources=await getEnabledSources();
-          const src=sources.find(s=>s.id==v.source_id||s.source_id==v.source_id);
-          if(src&&src.url) { dd=await apiFetch(`${API}/api/search/source?url=${encodeURIComponent(src.url)}&wd=${encodeURIComponent(v.vod_name)}`,15000); if(dd&&dd.list&&dd.list.length){matchedVod=dd.list.find(d=>d.vod_name===v.vod_name);if(!matchedVod)matchedVod=dd.list[0];} }
+          const detail=await apiFetch(`${API}/api/video/detail?source_id=${v.source_id}&ids=${v.vod_id}`,15000);
+          if(detail&&detail.list&&detail.list.length){
+            matchedVod=detail.list.find(d=>d.vod_name===v.vod_name)||detail.list[0];
+          }
         }catch(e){}
+      }
+      // 如果有 source_url，用 /api/video/detail/url 接口
+      if(!matchedVod&&v.source_url&&v.vod_id) {
+        try {
+          const detail=await apiFetch(`${API}/api/video/detail/url?url=${encodeURIComponent(v.source_url)}&ids=${v.vod_id}`,15000);
+          if(detail&&detail.list&&detail.list.length){
+            matchedVod=detail.list.find(d=>d.vod_name===v.vod_name)||detail.list[0];
+          }
+        }catch(e){}
+      }
+      // fallback: 搜索接口
+      if(!matchedVod) {
+        let dd=null;
+        if(v.source_url) { try{dd=await apiFetch(`${API}/api/search/source?url=${encodeURIComponent(v.source_url)}&wd=${encodeURIComponent(v.vod_name)}`,15000);}catch(e){} }
+        if(dd&&dd.list&&dd.list.length) { matchedVod=dd.list.find(d=>d.vod_name===v.vod_name); if(!matchedVod)matchedVod=dd.list[0]; }
+        if(!matchedVod&&v.source_id) {
+          try {
+            const sources=await getEnabledSources();
+            const src=sources.find(s=>s.id==v.source_id||s.source_id==v.source_id);
+            if(src&&src.url) { dd=await apiFetch(`${API}/api/search/source?url=${encodeURIComponent(src.url)}&wd=${encodeURIComponent(v.vod_name)}`,15000); if(dd&&dd.list&&dd.list.length){matchedVod=dd.list.find(d=>d.vod_name===v.vod_name);if(!matchedVod)matchedVod=dd.list[0];} }
+          }catch(e){}
+        }
       }
       if(matchedVod) {
         currentVideo=Object.assign({},currentVideo,{vod_play_url:matchedVod.vod_play_url||'',vod_play_from:matchedVod.vod_play_from||'',vod_content:matchedVod.vod_content||currentVideo.vod_content||'',vod_pic:matchedVod.vod_pic||currentVideo.vod_pic||''});
@@ -3876,6 +3898,10 @@ async function openPlayPage(v) {
         if(playSources.length===1){document.getElementById('sourceCard').style.display='none';renderEpisodes(playSources[0],0);}
         else if(playSources.length>1){document.getElementById('sourceCard').style.display='';renderSourceTabs();renderEpisodes(playSources[0],0);}
         fetchOtherSources(v.vod_name);
+      } else {
+        // 所有方式都失败，显示提示
+        document.getElementById('episodesCard').style.display='';
+        document.getElementById('episodesGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-secondary);font-size:13px">暂无播放源</div>';
       }
     }catch(e){}
     updateFavBtn();

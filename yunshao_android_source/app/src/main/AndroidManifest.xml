@@ -20,7 +20,7 @@
         <activity
             android:name=".SplashActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|locale|layoutDirection"
             android:theme="@style/Theme.YunShao.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
