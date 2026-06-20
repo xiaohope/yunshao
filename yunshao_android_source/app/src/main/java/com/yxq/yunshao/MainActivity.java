@@ -265,8 +265,8 @@ public class MainActivity extends Activity {
                 
                 // 状态栏隐藏在hideSystemBars()中统一处理
                 
-                // 隐藏WebView内容
-                webView.setVisibility(View.GONE);
+                // 隐藏WebView内容（用INVISIBLE而非GONE，保留Surface使视频继续渲染，进度条才能更新）
+                webView.setVisibility(View.INVISIBLE);
                 
                 // 将全屏容器从rootView移到DecorView，不受系统insets约束
                 rootView.removeView(fullscreenContainer);
