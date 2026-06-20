@@ -415,29 +415,6 @@ body.layout-narrow .page.active {
     padding: 8px 6px !important;
   }
 
-  /* ======== 热门推荐卡片：强制与短剧/电影完全一致的紧凑尺寸 ======== */
-  #homePage #hotGrid {
-    display: grid !important;
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 10px !important;
-    width: 100% !important;
-  }
-
-  #homePage #hotGrid .video-card {
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    height: auto !important;
-    flex: none !important;
-  }
-
-  #homePage #hotGrid .video-card-poster {
-    aspect-ratio: 2/3 !important;
-    border-radius: 8px !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-  }
 
   /* 只显示当前激活的tab面板，其他保持隐藏 */
 
@@ -1117,7 +1094,7 @@ body.layout-narrow .page.active {
     }
 
     #homePage #hotGrid {
-      grid-template-columns: repeat(6, 1fr) !important;
+      grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
       gap: 10px !important;
     }
 
@@ -1152,7 +1129,7 @@ body.layout-narrow .page.active {
     }
 
     #homePage #hotGrid {
-      grid-template-columns: repeat(7, 1fr) !important;
+      grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
       gap: 10px !important;
     }
 
