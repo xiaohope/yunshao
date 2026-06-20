@@ -6,7 +6,7 @@
 <title>云梢</title>
 <script>if(window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches){document.documentElement.classList.add('theme-dark');document.getElementById('boot-style')||document.write('<style id="boot-style">html,body{background:#0A0E27!important;margin:0;padding:0;}</style>');}</script>
 <style id="boot-style">html,body{background:#F0F2F7!important;margin:0;padding:0;}</style>
-<link rel="stylesheet" href="style.css?v=3.9.2">
+<link rel="stylesheet" href="style.css?v=3.9.3">
 <script>
 (function(){
   // 桌面端检测
@@ -22,7 +22,7 @@
     // 加载横版样式
     var link=document.createElement('link');
     link.rel='stylesheet';
-    link.href='widescreen.css?v=3.9.2';
+    link.href='widescreen.css?v=3.9.3';
     document.head.appendChild(link);
     
     // 标记设备类型
@@ -35,7 +35,7 @@
     // 电视/桌面加载焦点管理
     if(isTV||!hasTouch||isDesktop){
       var s=document.createElement('script');
-      s.src='focus.js?v=3.9.2';
+      s.src='focus.js?v=3.9.3';
       s.onload=function(){if(window.FocusManager)FocusManager.init();};
       document.head.appendChild(s);
     }
@@ -550,5 +550,5 @@
   <div class="toast" id="toast"></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script src="/app.js?v=3.9.2"></script>
+<script src="/app.js?v=3.9.3"></script>
 </body>
