@@ -670,6 +670,31 @@ public class MainActivity extends Activity {
         if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
     }
 
+    /**
+     * 屏幕旋转或尺寸变化时重新注入物理尺寸，触发前端重新布局
+     */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (webView == null) return;
+        // 全屏播放中不让 Activity 重启，但需更新视频比例
+        if (isFullscreen) {
+            applyVideoRatio(currentVideoRatio);
+            return;
+        }
+        runOnUiThread(() -> {
+            android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getRealMetrics(dm);
+            int physW = dm.widthPixels;
+            int physH = dm.heightPixels;
+            webView.evaluateJavascript(
+                "window.__screenW=" + physW + ";window.__screenH=" + physH +
+                ";if(typeof applyLayout==='function')applyLayout(localStorage.getItem('ys_layout')||'auto');",
+                null
+            );
+        });
+    }
+
     @Override
     public void onBackPressed() {
         if (isFullscreen) {

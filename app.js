@@ -2579,12 +2579,19 @@ function updateViewport(mode){
     // 横屏模式：强制viewport为屏幕实际宽度（dp），让CSS媒体查询按真实尺寸触发
     var wideDp = Math.max(sw,sh) / (window.devicePixelRatio||1);
     viewport.content = 'width='+Math.round(wideDp)+', initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    document.body.classList.add('is-widescreen');
   } else if(mode==='narrow'){
     // 竖屏模式：固定窄viewport
     viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    document.body.classList.remove('is-widescreen');
   } else {
-    // 自动模式：默认
+    // 自动模式：根据物理尺寸决定
     viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    if(isWideScreen){
+      document.body.classList.add('is-widescreen');
+    } else {
+      document.body.classList.remove('is-widescreen');
+    }
   }
 }
 // 初始化布局

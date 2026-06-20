@@ -29,11 +29,11 @@
         </activity>
         
         <!-- 主页面 -->
+        <!-- 不在 Manifest 中锁定方向，允许平板横屏旋转 -->
         <activity
             android:name=".MainActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboard|keyboardHidden|locale|layoutDirection"
-            android:screenOrientation="portrait"
             android:launchMode="singleTop">
         </activity>
     </application>
