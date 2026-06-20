@@ -265,17 +265,16 @@ function applyFullscreenCSS() {
     videoName = currentVideo.name || currentVideo.title;
   }
   if (!videoName) {
-    // 从 DOM 获取标题
     const titleEl = document.querySelector('.detail-info h1, .detail-info .title, .video-card.active .card-title, .player-info-overlay .video-name');
     if (titleEl) videoName = titleEl.textContent.trim();
   }
   if (!videoName) {
-    // 从 video 元素的 alt 或 title 属性获取
     if (video) {
       videoName = video.getAttribute('title') || video.getAttribute('alt') || '';
     }
   }
   if (!videoName) videoName = '未知视频';
+  window.__currentVideoName = videoName; // 供原生全屏读取标题
   const safeName = videoName.replace(/"/g, '&quot;');
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
@@ -4199,6 +4198,7 @@ function goToPlayFromInfo() {
 }
 
 async function openPlayPage(v) {
+  window.__currentVideoName = v.vod_name || v.title || ''; // 供原生全屏读取标题
   document.getElementById('detailTitle').textContent=v.vod_name;
   document.getElementById('infoTitle').textContent=v.vod_name;
   document.getElementById('episodesCard').style.display='none';
