@@ -213,6 +213,32 @@ function enterFullscreenMode() {
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
 
+  // 根据视频宽高比自动设置屏幕方向
+  // 横屏视频 → 强制横屏；竖屏视频（短剧）→ 保持竖屏
+  function applyOrientation() {
+    if (v.videoWidth > 0 && v.videoHeight > 0) {
+      const isPortrait = v.videoHeight > v.videoWidth;
+      const mode = isPortrait ? 'portrait' : 'landscape';
+      if (window.YunShaoNative && window.YunShaoNative.setOrientation) {
+        try { YunShaoNative.setOrientation(mode); } catch (e) {}
+      }
+    }
+  }
+
+  if (v.videoWidth > 0 && v.videoHeight > 0) {
+    applyOrientation();
+  } else {
+    v.addEventListener('loadedmetadata', applyOrientation, { once: true });
+    // 超时保护：500ms 后还没拿到元数据就默认横屏
+    setTimeout(() => {
+      if (v.videoWidth === 0 || v.videoHeight === 0) {
+        if (window.YunShaoNative && window.YunShaoNative.setOrientation) {
+          try { YunShaoNative.setOrientation('landscape'); } catch (e) {}
+        }
+      }
+    }, 500);
+  }
+
   // CSS全屏方案：统一走applyFullscreenCSS，不再触发原生全屏
   applyFullscreenCSS();
 
@@ -233,6 +259,11 @@ function fmt(seconds) {
 }
 function exitFullscreenMode() {
   removeFullscreenCSS();
+
+  // 恢复自动旋转
+  if (window.YunShaoNative && window.YunShaoNative.setOrientation) {
+    try { YunShaoNative.setOrientation('unset'); } catch (e) {}
+  }
 
   // 通知原生恢复系统栏
   if (window.YunShaoNative && window.YunShaoNative.showSystemUI) {

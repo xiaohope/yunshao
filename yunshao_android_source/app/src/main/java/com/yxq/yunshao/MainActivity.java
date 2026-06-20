@@ -260,6 +260,24 @@ public class MainActivity extends Activity {
                     if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
                 });
             }
+
+            // 全屏方向控制（JS调用，根据视频宽高比自动旋转屏幕）
+            @JavascriptInterface
+            public void setOrientation(String mode) {
+                runOnUiThread(() -> {
+                    switch (mode) {
+                        case "landscape":
+                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                            break;
+                        case "portrait":
+                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                            break;
+                        default:
+                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                            break;
+                    }
+                });
+            }
         }, "YunShaoNative");
 
         webView.setWebChromeClient(new WebChromeClient() {
