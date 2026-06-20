@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
@@ -64,6 +65,8 @@ public class MainActivity extends Activity {
     private View touchLayerView;
     private boolean isVideoPlaying = true;
     private Runnable progressUpdater;
+    private LinearLayout settingsPanel;
+    private int currentSeekSeconds = 10;
     private boolean isPortraitVideo = false; // 竖屏视频标记
     private boolean doubleBackToExit = false; // 双击退出标记
 
@@ -78,6 +81,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        loadFsPrefs(); // 加载全屏设置默认值
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         
         // 允许内容延伸到刘海区域
@@ -301,54 +305,97 @@ public class MainActivity extends Activity {
         webView.loadUrl("http://localhost:8989");
     }
 
-    /**
-     * 在全屏容器上叠加原生控件
-     */
     private void addFullscreenControls() {
         // ========== 顶部控制栏 ==========
         topBarView = new LinearLayout(this);
         topBarView.setOrientation(LinearLayout.HORIZONTAL);
         topBarView.setGravity(Gravity.CENTER_VERTICAL);
-        topBarView.setPadding(24, 36, 24, 16);
+        topBarView.setPadding(20, 32, 20, 12);
         GradientDrawable topBg = new GradientDrawable(
             GradientDrawable.Orientation.BOTTOM_TOP,
-            new int[]{0xBB000000, 0xFF000000}
+            new int[]{0xCC000000, 0xE6000000}
         );
         topBarView.setBackground(topBg);
         topBarView.setTag("topBar");
-        
+
         FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         );
         topParams.gravity = Gravity.TOP;
-        
+
         // 返回按钮
         Button backBtn = new Button(this);
-        backBtn.setText("← 返回");
+        backBtn.setText("←");
         backBtn.setTextColor(0xFFFFFFFF);
         backBtn.setBackgroundColor(0x00000000);
-        backBtn.setTextSize(16);
-        backBtn.setPadding(20, 10, 20, 10);
+        backBtn.setTextSize(22);
+        backBtn.setPadding(12, 6, 12, 6);
         backBtn.setOnClickListener(v -> exitFullscreenInternal());
-        topBarView.addView(backBtn);
-        
-        // 弹性空间
-        View spacer = new View(this);
-        LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, 1, 1.0f);
-        topBarView.addView(spacer, spacerParams);
-        
-        // 快退按钮（长按连续快退10秒）
-        Button rewindBtn = new Button(this);
-        rewindBtn.setText("«10s");
-        rewindBtn.setTextColor(0xFFFFFFFF);
-        rewindBtn.setTextSize(12);
-        rewindBtn.setPadding(16, 6, 16, 6);
-        rewindBtn.setBackgroundColor(0x33FFFFFF);
+        LinearLayout.LayoutParams backParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        backParams.setMargins(4, 0, 12, 0);
+        topBarView.addView(backBtn, backParams);
+
+        // 视频标题
+        TextView titleView = new TextView(this);
+        titleView.setText("未知视频");
+        titleView.setTextColor(0xFFFFFFFF);
+        titleView.setTextSize(15);
+        titleView.setSingleLine(true);
+        titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f
+        );
+        titleParams.setMargins(4, 0, 12, 0);
+        topBarView.addView(titleView, titleParams);
+
+        // 获取视频标题
+        handler.postDelayed(() -> {
+            webView.evaluateJavascript(
+                "window.__currentVideoName || ''",
+                titleResult -> {
+                    if (titleResult != null && !titleResult.isEmpty()
+                            && !"null".equals(titleResult) && !"\"\"".equals(titleResult)) {
+                        runOnUiThread(() -> titleView.setText(titleResult.replace("\"", "")));
+                    }
+                }
+            );
+        }, 800);
+
+        fullscreenContainer.addView(topBarView, topParams);
+
+        // ========== 底部控制栏 ==========
+        bottomBar = new LinearLayout(this);
+        bottomBar.setOrientation(LinearLayout.HORIZONTAL);
+        bottomBar.setGravity(Gravity.CENTER_VERTICAL);
+        bottomBar.setPadding(20, 10, 20, 20);
+        GradientDrawable bottomBg = new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0xCC000000, 0xE6000000}
+        );
+        bottomBar.setBackground(bottomBg);
+        bottomBar.setTag("bottomBar");
+
+        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        bottomParams.gravity = Gravity.BOTTOM;
+
+        // ------ 左侧：快退 | 播放 | 快进 ------
+        LinearLayout leftGroup = new LinearLayout(this);
+        leftGroup.setOrientation(LinearLayout.HORIZONTAL);
+        leftGroup.setGravity(Gravity.CENTER_VERTICAL);
+
+        // 快退按钮
+        Button rewindBtn = makeFsBtn("«10s");
         rewindBtn.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
-                    seekVideo(-10);
+                    seekVideo(currentSeekSeconds > 0 ? -currentSeekSeconds : -10);
                     isSeeking = true;
                     seekDirection = -1;
                     handler.removeCallbacks(seekRunnable);
@@ -356,7 +403,7 @@ public class MainActivity extends Activity {
                         @Override
                         public void run() {
                             if (isSeeking) {
-                                seekVideo(seekDirection * 10);
+                                seekVideo(seekDirection * (currentSeekSeconds > 0 ? currentSeekSeconds : 10));
                                 handler.postDelayed(this, 400);
                             }
                         }
@@ -371,178 +418,15 @@ public class MainActivity extends Activity {
             }
             return true;
         });
-        LinearLayout.LayoutParams rewindParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        rewindParams.setMargins(4, 0, 4, 0);
-        topBarView.addView(rewindBtn, rewindParams);
+        leftGroup.addView(rewindBtn);
 
-        // 倍速按钮
-        speedBtn = new Button(this);
-        speedBtn.setText("1.0x");
-        speedBtn.setTextColor(0xFFFFFFFF);
-        speedBtn.setTextSize(12);
-        speedBtn.setPadding(16, 6, 16, 6);
-        speedBtn.setBackgroundColor(0x33FFFFFF);
-        speedBtn.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(this, v);
-            String[] speedLabels = {"0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x"};
-            float[] speedValues = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
-            Menu menu = popup.getMenu();
-            for (int i = 0; i < speedLabels.length; i++) {
-                menu.add(0, i, i, speedLabels[i]);
-            }
-            popup.setOnMenuItemClickListener(item -> {
-                int idx = item.getItemId();
-                currentPlaybackSpeed = speedValues[idx];
-                speedBtn.setText(speedLabels[idx]);
-                webView.evaluateJavascript(
-                    "var v=document.querySelector('#playerArea video');if(v)v.playbackRate=" + currentPlaybackSpeed + ";",
-                    null
-                );
-                return true;
-            });
-            popup.show();
-        });
-        LinearLayout.LayoutParams speedParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        speedParams.setMargins(4, 0, 4, 0);
-        topBarView.addView(speedBtn, speedParams);
-
-        // 快进按钮（长按连续快进10秒）
-        Button forwardBtn = new Button(this);
-        forwardBtn.setText("10s»");
-        forwardBtn.setTextColor(0xFFFFFFFF);
-        forwardBtn.setTextSize(12);
-        forwardBtn.setPadding(16, 6, 16, 6);
-        forwardBtn.setBackgroundColor(0x33FFFFFF);
-        forwardBtn.setOnTouchListener((v, event) -> {
-            switch (event.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    seekVideo(10);
-                    isSeeking = true;
-                    seekDirection = 1;
-                    handler.removeCallbacks(seekRunnable);
-                    seekRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            if (isSeeking) {
-                                seekVideo(seekDirection * 10);
-                                handler.postDelayed(this, 400);
-                            }
-                        }
-                    };
-                    handler.postDelayed(seekRunnable, 400);
-                    break;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    isSeeking = false;
-                    if (seekRunnable != null) handler.removeCallbacks(seekRunnable);
-                    break;
-            }
-            return true;
-        });
-        LinearLayout.LayoutParams forwardParams = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        forwardParams.setMargins(4, 0, 4, 0);
-        topBarView.addView(forwardBtn, forwardParams);
-        
-        // 比例按钮组
-        String[] ratios = {"默认", "16:9", "4:3", "填充"};
-        String[] ratioValues = {"contain", "16/9", "4/3", "cover"};
-        for (int i = 0; i < ratios.length; i++) {
-            Button btn = new Button(this);
-            btn.setText(ratios[i]);
-            btn.setTextColor(0xFFFFFFFF);
-            btn.setTextSize(12);
-            btn.setPadding(16, 6, 16, 6);
-            final String ratio = ratioValues[i];
-            btn.setOnClickListener(v -> {
-                currentVideoRatio = ratio;
-                applyVideoRatio(ratio);
-                updateRatioButtons(ratio);
-            });
-            btn.setTag("ratio_" + ratioValues[i]);
-            if (ratioValues[i].equals(currentVideoRatio)) {
-                btn.setBackgroundColor(0x66FFFFFF);
-            } else {
-                btn.setBackgroundColor(0x33FFFFFF);
-            }
-            LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-            btnParams.setMargins(4, 0, 4, 0);
-            topBarView.addView(btn, btnParams);
-        }
-        
-        fullscreenContainer.addView(topBarView, topParams);
-        
-        // ========== 底部播放控制栏 ==========
-        bottomBar = new LinearLayout(this);
-        bottomBar.setOrientation(LinearLayout.VERTICAL);
-        bottomBar.setPadding(24, 12, 24, 24);
-        // 渐变黑背景，遮盖原生进度条
-        GradientDrawable bottomBg = new GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{0xBB000000, 0xFF000000}
-        );
-        bottomBar.setBackground(bottomBg);
-        bottomBar.setMinimumHeight(120);
-        bottomBar.setTag("bottomBar");
-        
-        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        );
-        bottomParams.gravity = Gravity.BOTTOM;
-        
-        // 进度条
-        seekBar = new SeekBar(this);
-        seekBar.setMax(1000);
-        seekBar.setProgress(0);
-        seekBar.setPadding(0, 8, 0, 8);
-        seekBar.setProgressTintList(android.content.res.ColorStateList.valueOf(0xFFE50914));
-        seekBar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(0xFF4A4A4A));
-        seekBar.setThumbTintList(android.content.res.ColorStateList.valueOf(0xFFFFFFFF));
-        seekBar.setSplitTrack(false);
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
-                if (fromUser) {
-                    float pct = progress / 1000f;
-                    webView.evaluateJavascript(
-                        "var v=document.querySelector('#playerArea video');if(v&&v.duration){v.currentTime=v.duration*" + pct + ";}",
-                        null
-                    );
-                }
-            }
-            @Override
-            public void onStartTrackingTouch(SeekBar sb) {}
-            @Override
-            public void onStopTrackingTouch(SeekBar sb) {}
-        });
-        bottomBar.addView(seekBar, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-        
-        // 播放暂停 + 时间行
-        LinearLayout ctrlRow = new LinearLayout(this);
-        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
-        ctrlRow.setGravity(Gravity.CENTER_VERTICAL);
-        
+        // 播放/暂停按钮
         playPauseBtn = new Button(this);
         playPauseBtn.setText("❚❚");
         playPauseBtn.setTextColor(0xFFFFFFFF);
         playPauseBtn.setBackgroundColor(0x00000000);
-        playPauseBtn.setTextSize(18);
-        playPauseBtn.setPadding(8, 4, 16, 4);
+        playPauseBtn.setTextSize(20);
+        playPauseBtn.setPadding(14, 6, 14, 6);
         playPauseBtn.setOnClickListener(v -> {
             if (isVideoPlaying) {
                 webView.evaluateJavascript("var v=document.querySelector('#playerArea video');if(v)v.pause();", null);
@@ -554,26 +438,157 @@ public class MainActivity extends Activity {
                 isVideoPlaying = true;
             }
         });
-        ctrlRow.addView(playPauseBtn);
-        
-        timeText = new TextView(this);
-        timeText.setText("00:00 / 00:00");
-        timeText.setTextColor(0xFFFFFFFF);
-        timeText.setTextSize(12);
-        LinearLayout.LayoutParams timeParams = new LinearLayout.LayoutParams(
+        leftGroup.addView(playPauseBtn);
+
+        // 快进按钮
+        Button forwardBtn = makeFsBtn("10s»");
+        forwardBtn.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    seekVideo(currentSeekSeconds > 0 ? currentSeekSeconds : 10);
+                    isSeeking = true;
+                    seekDirection = 1;
+                    handler.removeCallbacks(seekRunnable);
+                    seekRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isSeeking) {
+                                seekVideo(seekDirection * (currentSeekSeconds > 0 ? currentSeekSeconds : 10));
+                                handler.postDelayed(this, 400);
+                            }
+                        }
+                    };
+                    handler.postDelayed(seekRunnable, 400);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isSeeking = false;
+                    if (seekRunnable != null) handler.removeCallbacks(seekRunnable);
+                    break;
+            }
+            return true;
+        });
+        leftGroup.addView(forwardBtn);
+
+        LinearLayout.LayoutParams leftParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f
+        );
+        bottomBar.addView(leftGroup, leftParams);
+
+        // ------ 右侧：倍速 | 比例 | 设置 ------
+        LinearLayout rightGroup = new LinearLayout(this);
+        rightGroup.setOrientation(LinearLayout.HORIZONTAL);
+        rightGroup.setGravity(Gravity.CENTER_VERTICAL);
+
+        // 倍速按钮
+        speedBtn = new Button(this);
+        updateSpeedBtnText();
+        speedBtn.setTextColor(0xFFFFFFFF);
+        speedBtn.setTextSize(13);
+        speedBtn.setPadding(10, 5, 10, 5);
+        speedBtn.setBackgroundColor(0x33FFFFFF);
+        speedBtn.setOnClickListener(v -> showSpeedPopup(speedBtn));
+        rightGroup.addView(speedBtn);
+
+        // 比例按钮
+        Button ratioBtn = new Button(this);
+        ratioBtn.setText(ratioLabel(currentVideoRatio));
+        ratioBtn.setTextColor(0xFFFFFFFF);
+        ratioBtn.setTextSize(13);
+        ratioBtn.setPadding(10, 5, 10, 5);
+        ratioBtn.setBackgroundColor(0x33FFFFFF);
+        LinearLayout.LayoutParams ratioBtnParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        timeParams.setMargins(8, 0, 0, 0);
-        ctrlRow.addView(timeText, timeParams);
-        
-        bottomBar.addView(ctrlRow, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
+        ratioBtnParams.setMargins(6, 0, 0, 0);
+        ratioBtn.setOnClickListener(v -> showRatioPopup(ratioBtn));
+        rightGroup.addView(ratioBtn, ratioBtnParams);
+
+        // 设置按钮
+        Button settingsBtn = new Button(this);
+        settingsBtn.setText("⚙");
+        settingsBtn.setTextColor(0xFFFFFFFF);
+        settingsBtn.setTextSize(18);
+        settingsBtn.setPadding(10, 5, 10, 5);
+        settingsBtn.setBackgroundColor(0x33FFFFFF);
+        LinearLayout.LayoutParams settingsBtnParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-        
+        );
+        settingsBtnParams.setMargins(6, 0, 0, 0);
+        settingsBtn.setOnClickListener(v -> toggleSettingsPanel());
+        rightGroup.addView(settingsBtn, settingsBtnParams);
+
+        LinearLayout.LayoutParams rightParams = new LinearLayout.LayoutParams(
+            0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.0f
+        );
+        rightParams.setMargins(0, 0, 0, 0);
+        bottomBar.addView(rightGroup, rightParams);
+
         fullscreenContainer.addView(bottomBar, bottomParams);
-        
+
+        // ========== 设置面板（默认隐藏） ==========
+        settingsPanel = new LinearLayout(this);
+        settingsPanel.setOrientation(LinearLayout.HORIZONTAL);
+        settingsPanel.setGravity(Gravity.CENTER_VERTICAL);
+        settingsPanel.setPadding(20, 10, 20, 10);
+        settingsPanel.setBackgroundColor(0xDD222222);
+        settingsPanel.setVisibility(View.GONE);
+        settingsPanel.setTag("settingsPanel");
+
+        FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        panelParams.gravity = Gravity.BOTTOM;
+        panelParams.bottomMargin = 120; // 在底部控制栏上方
+
+        // 跳过时长设置
+        addSettingsLabel(settingsPanel, "跳过:");
+        for (int sec : new int[]{5, 10, 15, 30, 60}) {
+            Button b = new Button(this);
+            b.setText(sec + "s");
+            b.setTextColor(sec == currentSeekSeconds ? 0xFFFFFFFF : 0x99FFFFFF);
+            b.setTextSize(12);
+            b.setPadding(10, 4, 10, 4);
+            b.setBackgroundColor(sec == currentSeekSeconds ? 0x66E50914 : 0x33FFFFFF);
+            int finalSec = sec;
+            b.setOnClickListener(v -> {
+                currentSeekSeconds = finalSec;
+                saveFsPrefs();
+                // 更新按钮样式
+                updateSettingsPanel();
+            });
+            settingsPanel.addView(b);
+        }
+
+        // 倍速快捷设置
+        addSettingsLabel(settingsPanel, " 倍速:");
+        for (float spd : new float[]{0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f}) {
+            Button b = new Button(this);
+            String label = spd + "x";
+            b.setText(label);
+            b.setTextColor(Math.abs(spd - currentPlaybackSpeed) < 0.01 ? 0xFFFFFFFF : 0x99FFFFFF);
+            b.setTextSize(12);
+            b.setPadding(10, 4, 10, 4);
+            b.setBackgroundColor(Math.abs(spd - currentPlaybackSpeed) < 0.01 ? 0x66E50914 : 0x33FFFFFF);
+            float finalSpd = spd;
+            b.setOnClickListener(v -> {
+                currentPlaybackSpeed = finalSpd;
+                updateSpeedBtnText();
+                webView.evaluateJavascript(
+                    "var v=document.querySelector('#playerArea video');if(v)v.playbackRate=" + finalSpd + ";",
+                    null
+                );
+                saveFsPrefs();
+                updateSettingsPanel();
+            });
+            settingsPanel.addView(b);
+        }
+
+        fullscreenContainer.addView(settingsPanel, panelParams);
+
         // ========== 透明触摸捕获层 ==========
         touchLayerView = new View(this);
         touchLayerView.setTag("touchLayer");
@@ -582,25 +597,29 @@ public class MainActivity extends Activity {
             FrameLayout.LayoutParams.MATCH_PARENT
         );
         fullscreenContainer.addView(touchLayerView, touchParams);
-        
+
         // 点击触摸层：显示/隐藏所有控制栏
         touchLayerView.setOnClickListener(v -> {
             boolean show = topBarView.getVisibility() != View.VISIBLE;
             topBarView.setVisibility(show ? View.VISIBLE : View.GONE);
             bottomBar.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (settingsPanel != null && settingsPanel.getVisibility() == View.VISIBLE) {
+                settingsPanel.setVisibility(View.GONE);
+            }
             if (show) {
                 scheduleHideControls(5000);
             }
         });
-        
+
         // 确保控制栏在触摸层上方
         topBarView.bringToFront();
         bottomBar.bringToFront();
-        
+        if (settingsPanel != null) settingsPanel.bringToFront();
+
         // 初始5秒后自动隐藏
         isVideoPlaying = true;
         scheduleHideControls(5000);
-        
+
         // 启动进度更新
         startProgressUpdater();
     }
@@ -752,6 +771,150 @@ public class MainActivity extends Activity {
                 }
             }
         }
+    }
+
+    // ==================== 全屏辅助方法 ====================
+
+    private Button makeFsBtn(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(0xFFFFFFFF);
+        b.setTextSize(12);
+        b.setPadding(8, 4, 8, 4);
+        b.setBackgroundColor(0x33FFFFFF);
+        return b;
+    }
+
+    private void updateSpeedBtnText() {
+        if (speedBtn == null) return;
+        String[] labels = {"0.5x","0.75x","1.0x","1.25x","1.5x","2.0x"};
+        float[] values = {0.5f,0.75f,1.0f,1.25f,1.5f,2.0f};
+        for (int i = 0; i < values.length; i++) {
+            if (Math.abs(values[i] - currentPlaybackSpeed) < 0.01f) {
+                speedBtn.setText(labels[i]);
+                break;
+            }
+        }
+    }
+
+    private void showSpeedPopup(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        String[] labels = {"0.5x","0.75x","1.0x","1.25x","1.5x","2.0x"};
+        float[] values = {0.5f,0.75f,1.0f,1.25f,1.5f,2.0f};
+        Menu menu = popup.getMenu();
+        for (int i = 0; i < labels.length; i++) menu.add(0, i, i, labels[i]);
+        popup.setOnMenuItemClickListener(item -> {
+            int idx = item.getItemId();
+            currentPlaybackSpeed = values[idx];
+            updateSpeedBtnText();
+            webView.evaluateJavascript(
+                "var v=document.querySelector('#playerArea video');if(v)v.playbackRate=" + currentPlaybackSpeed + ";", null);
+            saveFsPrefs();
+            return true;
+        });
+        popup.show();
+    }
+
+    private String ratioLabel(String ratio) {
+        if ("contain".equals(ratio)) return "默认";
+        if ("16/9".equals(ratio)) return "16:9";
+        if ("4/3".equals(ratio)) return "4:3";
+        if ("cover".equals(ratio)) return "填充";
+        return ratio;
+    }
+
+    private void showRatioPopup(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        String[] labels = {"默认","16:9","4:3","填充"};
+        String[] values = {"contain","16/9","4/3","cover"};
+        Menu menu = popup.getMenu();
+        for (int i = 0; i < labels.length; i++) menu.add(0, i, i, labels[i]);
+        popup.setOnMenuItemClickListener(item -> {
+            int idx = item.getItemId();
+            currentVideoRatio = values[idx];
+            applyVideoRatio(currentVideoRatio);
+            saveFsPrefs();
+            return true;
+        });
+        popup.show();
+    }
+
+    private void toggleSettingsPanel() {
+        if (settingsPanel == null) return;
+        boolean show = settingsPanel.getVisibility() != View.VISIBLE;
+        settingsPanel.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (show) updateSettingsPanel();
+    }
+
+    private void updateSettingsPanel() {
+        if (settingsPanel == null) return;
+        settingsPanel.removeAllViews();
+        addSettingsLabel(settingsPanel, "跳过:");
+        for (int sec : new int[]{5,10,15,30,60}) {
+            Button b = new Button(this);
+            b.setText(sec + "s");
+            b.setTextColor(sec == currentSeekSeconds ? 0xFFFFFFFF : 0x99FFFFFF);
+            b.setTextSize(11);
+            b.setPadding(8, 3, 8, 3);
+            b.setBackgroundColor(sec == currentSeekSeconds ? 0x66E50914 : 0x33FFFFFF);
+            int finalSec = sec;
+            b.setOnClickListener(v -> {
+                currentSeekSeconds = finalSec;
+                saveFsPrefs();
+                updateSettingsPanel();
+            });
+            settingsPanel.addView(b);
+        }
+        addSettingsLabel(settingsPanel, " 倍速:");
+        for (float spd : new float[]{0.5f,0.75f,1.0f,1.25f,1.5f,2.0f}) {
+            Button b = new Button(this);
+            b.setText(String.valueOf(spd) + "x");
+            b.setTextColor(Math.abs(spd - currentPlaybackSpeed) < 0.01f ? 0xFFFFFFFF : 0x99FFFFFF);
+            b.setTextSize(11);
+            b.setPadding(8, 3, 8, 3);
+            b.setBackgroundColor(Math.abs(spd - currentPlaybackSpeed) < 0.01f ? 0x66E50914 : 0x33FFFFFF);
+            float finalSpd = spd;
+            b.setOnClickListener(v -> {
+                currentPlaybackSpeed = finalSpd;
+                updateSpeedBtnText();
+                webView.evaluateJavascript(
+                    "var v=document.querySelector('#playerArea video');if(v)v.playbackRate=" + finalSpd + ";", null);
+                saveFsPrefs();
+                updateSettingsPanel();
+            });
+            settingsPanel.addView(b);
+        }
+    }
+
+    private void addSettingsLabel(LinearLayout panel, String text) {
+        TextView label = new TextView(this);
+        label.setText(text);
+        label.setTextColor(0xCCCCCC);
+        label.setTextSize(11);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(6, 0, 4, 0);
+        panel.addView(label, lp);
+    }
+
+    private void saveFsPrefs() {
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences("yunshao_fs", MODE_PRIVATE);
+            android.content.SharedPreferences.Editor editor = prefs.edit();
+            editor.putInt("seek_sec", currentSeekSeconds);
+            editor.putFloat("speed", currentPlaybackSpeed);
+            editor.putString("ratio", currentVideoRatio);
+            editor.apply();
+        } catch (Exception e) {}
+    }
+
+    private void loadFsPrefs() {
+        try {
+            android.content.SharedPreferences prefs = getSharedPreferences("yunshao_fs", MODE_PRIVATE);
+            currentSeekSeconds = prefs.getInt("seek_sec", 10);
+            currentPlaybackSpeed = prefs.getFloat("speed", 1.0f);
+            currentVideoRatio = prefs.getString("ratio", "contain");
+        } catch (Exception e) {}
     }
 
     /**

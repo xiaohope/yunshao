@@ -1032,14 +1032,19 @@ public class YunShaoServer extends NanoHTTPD {
 
     private Response serveStatic(String uri) {
         try {
-            String path = uri.equals("/") ? "index.html" : uri.substring(1);
+            // 去掉 query 参数，支持 style.css?v=xxx 这种写法
+            String cleanUri = uri.split("\\?")[0];
+            String path = cleanUri.equals("/") ? "index.html" : cleanUri.substring(1);
             InputStream is = context.getAssets().open(path);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[4096]; int n;
             while ((n = is.read(buf)) != -1) bos.write(buf, 0, n);
             is.close();
             Response resp = newFixedLengthResponse(Response.Status.OK, getMimeType(path), new ByteArrayInputStream(bos.toByteArray()), bos.size());
+            // 强制不缓存，防止 WebView 缓存旧版 CSS/JS
             resp.addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            resp.addHeader("Pragma", "no-cache");
+            resp.addHeader("Expires", "0");
             return resp;
         } catch (Exception e) {
             try {
