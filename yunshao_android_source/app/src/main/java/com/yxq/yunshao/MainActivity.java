@@ -352,18 +352,31 @@ public class MainActivity extends Activity {
         titleParams.setMargins(4, 0, 12, 0);
         topBarView.addView(titleView, titleParams);
 
-        // 获取视频标题
+        // 获取视频标题（立即读取，如果失败则200ms后重试）
         handler.postDelayed(() -> {
             webView.evaluateJavascript(
                 "window.__currentVideoName || ''",
                 titleResult -> {
-                    if (titleResult != null && !titleResult.isEmpty()
-                            && !"null".equals(titleResult) && !"\"\"".equals(titleResult)) {
-                        runOnUiThread(() -> titleView.setText(titleResult.replace("\"", "")));
+                    String title = titleResult != null ? titleResult.replace("\"", "") : "";
+                    if (!title.isEmpty() && !"null".equals(title)) {
+                        runOnUiThread(() -> titleView.setText(title));
+                    } else {
+                        // 重试一次
+                        handler.postDelayed(() -> {
+                            webView.evaluateJavascript(
+                                "window.__currentVideoName || document.title || ''",
+                                retryResult -> {
+                                    String retryTitle = retryResult != null ? retryResult.replace("\"", "") : "";
+                                    if (!retryTitle.isEmpty() && !"null".equals(retryTitle)) {
+                                        runOnUiThread(() -> titleView.setText(retryTitle));
+                                    }
+                                }
+                            );
+                        }, 300);
                     }
                 }
             );
-        }, 800);
+        }, 100);
 
         fullscreenContainer.addView(topBarView, topParams);
 

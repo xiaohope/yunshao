@@ -213,6 +213,10 @@ function enterFullscreenMode() {
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
   const isPortrait = v.videoHeight > v.videoWidth;
+  
+  // 关键：在调用原生全屏前，先设置视频标题
+  window.__currentVideoName = currentVideo ? currentVideo.vod_name : '';
+  
   if(window.YunShaoNative){
     YunShaoNative.enterFullscreen(isPortrait);
   } else {
