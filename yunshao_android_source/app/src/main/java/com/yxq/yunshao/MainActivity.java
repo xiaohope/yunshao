@@ -27,6 +27,9 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.graphics.drawable.GradientDrawable;
+import android.view.MotionEvent;
+import android.view.Menu;
+import android.widget.PopupMenu;
 
 /**
  * 云梢 v3.5.1 - 全屏方案：原生onShowCustomView标准模式
@@ -63,6 +66,14 @@ public class MainActivity extends Activity {
     private Runnable progressUpdater;
     private boolean isPortraitVideo = false; // 竖屏视频标记
     private boolean doubleBackToExit = false; // 双击退出标记
+
+    // 快进快退控制
+    private boolean isSeeking = false;
+    private int seekDirection = 0;
+    private Runnable seekRunnable;
+    // 倍速控制
+    private float currentPlaybackSpeed = 1.0f;
+    private Button speedBtn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -327,6 +338,120 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(0, 1, 1.0f);
         topBarView.addView(spacer, spacerParams);
         
+        // 快退按钮（长按连续快退10秒）
+        Button rewindBtn = new Button(this);
+        rewindBtn.setText("«10s");
+        rewindBtn.setTextColor(0xFFFFFFFF);
+        rewindBtn.setTextSize(12);
+        rewindBtn.setPadding(16, 6, 16, 6);
+        rewindBtn.setBackgroundColor(0x33FFFFFF);
+        rewindBtn.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    seekVideo(-10);
+                    isSeeking = true;
+                    seekDirection = -1;
+                    handler.removeCallbacks(seekRunnable);
+                    seekRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isSeeking) {
+                                seekVideo(seekDirection * 10);
+                                handler.postDelayed(this, 400);
+                            }
+                        }
+                    };
+                    handler.postDelayed(seekRunnable, 400);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isSeeking = false;
+                    if (seekRunnable != null) handler.removeCallbacks(seekRunnable);
+                    break;
+            }
+            return true;
+        });
+        LinearLayout.LayoutParams rewindParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        rewindParams.setMargins(4, 0, 4, 0);
+        topBarView.addView(rewindBtn, rewindParams);
+
+        // 倍速按钮
+        speedBtn = new Button(this);
+        speedBtn.setText("1.0x");
+        speedBtn.setTextColor(0xFFFFFFFF);
+        speedBtn.setTextSize(12);
+        speedBtn.setPadding(16, 6, 16, 6);
+        speedBtn.setBackgroundColor(0x33FFFFFF);
+        speedBtn.setOnClickListener(v -> {
+            PopupMenu popup = new PopupMenu(this, v);
+            String[] speedLabels = {"0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x"};
+            float[] speedValues = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
+            Menu menu = popup.getMenu();
+            for (int i = 0; i < speedLabels.length; i++) {
+                menu.add(0, i, i, speedLabels[i]);
+            }
+            popup.setOnMenuItemClickListener(item -> {
+                int idx = item.getItemId();
+                currentPlaybackSpeed = speedValues[idx];
+                speedBtn.setText(speedLabels[idx]);
+                webView.evaluateJavascript(
+                    "var v=document.querySelector('#playerArea video');if(v)v.playbackRate=" + currentPlaybackSpeed + ";",
+                    null
+                );
+                return true;
+            });
+            popup.show();
+        });
+        LinearLayout.LayoutParams speedParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        speedParams.setMargins(4, 0, 4, 0);
+        topBarView.addView(speedBtn, speedParams);
+
+        // 快进按钮（长按连续快进10秒）
+        Button forwardBtn = new Button(this);
+        forwardBtn.setText("10s»");
+        forwardBtn.setTextColor(0xFFFFFFFF);
+        forwardBtn.setTextSize(12);
+        forwardBtn.setPadding(16, 6, 16, 6);
+        forwardBtn.setBackgroundColor(0x33FFFFFF);
+        forwardBtn.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    seekVideo(10);
+                    isSeeking = true;
+                    seekDirection = 1;
+                    handler.removeCallbacks(seekRunnable);
+                    seekRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            if (isSeeking) {
+                                seekVideo(seekDirection * 10);
+                                handler.postDelayed(this, 400);
+                            }
+                        }
+                    };
+                    handler.postDelayed(seekRunnable, 400);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isSeeking = false;
+                    if (seekRunnable != null) handler.removeCallbacks(seekRunnable);
+                    break;
+            }
+            return true;
+        });
+        LinearLayout.LayoutParams forwardParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        forwardParams.setMargins(4, 0, 4, 0);
+        topBarView.addView(forwardBtn, forwardParams);
+        
         // 比例按钮组
         String[] ratios = {"默认", "16:9", "4:3", "填充"};
         String[] ratioValues = {"contain", "16/9", "4/3", "cover"};
@@ -478,6 +603,17 @@ public class MainActivity extends Activity {
         
         // 启动进度更新
         startProgressUpdater();
+    }
+    
+    /**
+     * 快进/快退视频
+     * @param deltaSeconds 正数快进，负数快退
+     */
+    private void seekVideo(int deltaSeconds) {
+        webView.evaluateJavascript(
+            "var v=document.querySelector('#playerArea video');if(v&&v.duration){v.currentTime=Math.max(0,Math.min(v.duration,v.currentTime+" + deltaSeconds + "));}",
+            null
+        );
     }
     
     /**

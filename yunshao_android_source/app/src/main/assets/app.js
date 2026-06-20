@@ -235,6 +235,11 @@ function applyFullscreenCSS() {
       <button class="fs-back-btn" onclick="exitFullscreenMode()">
         <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
+      <div class="fs-seek-group">
+        <button class="fs-ctrl-btn" id="fsRewindBtn">«10s</button>
+        <button class="fs-ctrl-btn" id="fsSpeedBtn">1.0x</button>
+        <button class="fs-ctrl-btn" id="fsForwardBtn">10s»</button>
+      </div>
       <div class="fs-ratio-group">
         <button class="fs-ratio-btn ${currentVideoRatio==='contain'?'active':''}" data-ratio="contain" onclick="setVideoRatio('contain')">默认</button>
         <button class="fs-ratio-btn ${currentVideoRatio==='16/9'?'active':''}" data-ratio="16/9" onclick="setVideoRatio('16/9')">16:9</button>
@@ -246,6 +251,9 @@ function applyFullscreenCSS() {
     
     // 确保控制层始终在最上层
     controls.style.zIndex='2147483647';
+    
+    // 绑定快退/快进/倍速按钮事件
+    bindFsControlButtons(pa);
     
     // 添加全屏滑动快进功能
     addFullscreenSwipe(pa);
@@ -291,6 +299,12 @@ function removeFullscreenCSS() {
       pa.removeEventListener('touchend', pa._swipeHandler.touchend);
       delete pa._swipeHandler;
     }
+    // 清理快退/快进定时器
+    _fsSeeking = false;
+    clearInterval(_fsSeekTimer);
+    // 恢复播放速度
+    _fsSpeedIdx = 2;
+    if(v) v.playbackRate = 1.0;
     // 恢复自定义全屏按钮
     const fsBtn=pa.querySelector('.video-fs-btn');
     if(fsBtn) fsBtn.style.display='';
@@ -338,6 +352,87 @@ function removeFullscreenCSS() {
     const miniBar = document.getElementById('miniPlayerBar');
     if(miniBar) miniBar.style.display = '';
   }
+}
+
+// ==================== 全屏快退/快进/倍速控制 ====================
+let _fsSeekTimer = null;
+let _fsSeeking = false;
+let _fsSpeedIdx = 2; // 默认 1.0x
+const _fsSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+const _fsSpeedLabels = ['0.5x','0.75x','1.0x','1.25x','1.5x','2.0x'];
+
+function bindFsControlButtons(pa) {
+  const video = pa.querySelector('video');
+  if (!video) return;
+
+  // 快退按钮
+  const rewindBtn = pa.querySelector('#fsRewindBtn');
+  if (rewindBtn) {
+    const startRewind = (e) => {
+      e.preventDefault();
+      _fsSeeking = true;
+      _fsSeekVideo(video, -10);
+      clearInterval(_fsSeekTimer);
+      _fsSeekTimer = setInterval(() => {
+        if (_fsSeeking) _fsSeekVideo(video, -10);
+      }, 400);
+    };
+    const stopRewind = () => {
+      _fsSeeking = false;
+      clearInterval(_fsSeekTimer);
+    };
+    rewindBtn.addEventListener('touchstart', startRewind, {passive:false});
+    rewindBtn.addEventListener('mousedown', startRewind);
+    rewindBtn.addEventListener('touchend', stopRewind);
+    rewindBtn.addEventListener('touchcancel', stopRewind);
+    rewindBtn.addEventListener('mouseup', stopRewind);
+    rewindBtn.addEventListener('mouseleave', stopRewind);
+  }
+
+  // 快进按钮
+  const forwardBtn = pa.querySelector('#fsForwardBtn');
+  if (forwardBtn) {
+    const startForward = (e) => {
+      e.preventDefault();
+      _fsSeeking = true;
+      _fsSeekVideo(video, 10);
+      clearInterval(_fsSeekTimer);
+      _fsSeekTimer = setInterval(() => {
+        if (_fsSeeking) _fsSeekVideo(video, 10);
+      }, 400);
+    };
+    const stopForward = () => {
+      _fsSeeking = false;
+      clearInterval(_fsSeekTimer);
+    };
+    forwardBtn.addEventListener('touchstart', startForward, {passive:false});
+    forwardBtn.addEventListener('mousedown', startForward);
+    forwardBtn.addEventListener('touchend', stopForward);
+    forwardBtn.addEventListener('touchcancel', stopForward);
+    forwardBtn.addEventListener('mouseup', stopForward);
+    forwardBtn.addEventListener('mouseleave', stopForward);
+  }
+
+  // 倍速按钮 - 点击循环切换
+  const speedBtn = pa.querySelector('#fsSpeedBtn');
+  if (speedBtn) {
+    speedBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      _fsSpeedIdx = (_fsSpeedIdx + 1) % _fsSpeeds.length;
+      const speed = _fsSpeeds[_fsSpeedIdx];
+      const label = _fsSpeedLabels[_fsSpeedIdx];
+      speedBtn.textContent = label;
+      video.playbackRate = speed;
+      // 短暂高亮反馈
+      speedBtn.classList.add('active');
+      setTimeout(() => speedBtn.classList.remove('active'), 300);
+    });
+  }
+}
+
+function _fsSeekVideo(video, delta) {
+  if (!video || !video.duration) return;
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
 }
 
 // ==================== 全屏滑动快进功能 ====================
