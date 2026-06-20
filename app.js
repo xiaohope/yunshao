@@ -220,6 +220,9 @@ function enterFullscreenMode() {
   if (window.YunShaoNative && window.YunShaoNative.hideSystemUI) {
     try { YunShaoNative.hideSystemUI(); } catch (e) {}
   }
+
+  // pushState 让返回键能退出全屏
+  history.pushState({ fs: true }, '');
 }
 
 function fmt(seconds) {
@@ -235,6 +238,13 @@ function exitFullscreenMode() {
   if (window.YunShaoNative && window.YunShaoNative.showSystemUI) {
     try { YunShaoNative.showSystemUI(); } catch (e) {}
   }
+
+  // pop 掉之前 pushState 的状态，让返回键行为正常
+  setTimeout(() => {
+    if (history.state && history.state.fs) {
+      history.back();
+    }
+  }, 100);
 }
 
 // ==================== CSS全屏控制 ====================
@@ -284,6 +294,9 @@ function applyFullscreenCSS() {
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
       <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
+    
+    </div>
+
     <!-- 进度条 -->
     <div class="fs-progress-bar">
       <span class="fs-time-current" id="fsTimeCurrent">0:00</span>
@@ -575,6 +588,8 @@ function toggleFsSettings(pa) {
     panel.classList.remove('open');
     if (overlay) overlay.classList.remove('open');
     if (controls) controls.classList.remove('panel-open');
+    // 关闭面板后恢复控制层自动隐藏
+    showFullscreenControls(pa);
   } else {
     panel.classList.add('open');
     if (overlay) overlay.classList.add('open');

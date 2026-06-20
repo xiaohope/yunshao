@@ -812,10 +812,6 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        if (isFullscreen) {
-            exitFullscreenInternal();
-            return;
-        }
         // 检查JS层是否处于CSS全屏状态
         webView.evaluateJavascript(
             "(function(){" +
@@ -833,6 +829,10 @@ public class MainActivity extends Activity {
             "})()",
             result -> {
                 String r = result != null ? result.replace("\"", "").trim() : "exit";
+                if ("fullscreen".equals(r) || "back".equals(r)) {
+                    // 已经是全屏或返回，不做任何操作，等待JS处理完成
+                    return;
+                }
                 if ("exit".equals(r)) {
                     if (doubleBackToExit) {
                         MainActivity.super.onBackPressed();
