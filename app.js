@@ -22,6 +22,33 @@ let isCSSFullscreen = false;
 let customViewCallback = null; // 保存原生全屏回调
 let hotSearchKeywords = ['哪吒之魔童闹海','封神第二部','庆余年3','长相思2','与凤行','玫瑰的故事','墨雨云间','度华年','繁花','我是刑警'];
 
+// ==================== 全屏设置（持久化） ====================
+let _fsSeekSec = 10;       // 快进/快退跳过时长（秒）
+let _fsPlaySpeed = 1.0;    // 播放倍速
+let _fsVideoRatio = 'contain'; // 视频比例
+const _fsSeekOptions = [5, 10, 15, 30, 60];
+const _fsSpeedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+const _fsSpeedLabels = ['0.5x','0.75x','1.0x','1.25x','1.5x','2.0x'];
+const _fsRatioOptions = ['contain', '16/9', '4/3', 'cover'];
+const _fsRatioLabels = {'contain':'默认','16/9':'16:9','4/3':'4:3','cover':'填充'};
+
+function loadFsSettings() {
+  try {
+    const s = localStorage.getItem('ys_fs_seek');    if (s) _fsSeekSec = parseInt(s) || 10;
+    const sp = localStorage.getItem('ys_fs_speed');   if (sp) _fsPlaySpeed = parseFloat(sp) || 1.0;
+    const r = localStorage.getItem('ys_fs_ratio');    if (r) _fsVideoRatio = r;
+  } catch(e) {}
+}
+function saveFsSettings() {
+  try {
+    localStorage.setItem('ys_fs_seek', String(_fsSeekSec));
+    localStorage.setItem('ys_fs_speed', String(_fsPlaySpeed));
+    localStorage.setItem('ys_fs_ratio', _fsVideoRatio);
+  } catch(e) {}
+}
+// 初始化加载
+loadFsSettings();
+
 // 从后端获取热搜词，缓存到localStorage，每周一更新
 async function fetchHotKeywords() {
   const cacheKey = 'ys_hot_keywords';
@@ -210,75 +237,126 @@ function applyFullscreenCSS() {
   document.body.classList.add('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
-  if(pa){
-    // 把播放器移到body下，脱离detail-body的visibility:hidden影响
-    pa._originalParent = pa.parentNode;
-    pa._originalNextSibling = pa.nextSibling;
-    document.body.appendChild(pa);
-    pa.classList.add('player-fullscreen');
-    const v=pa.querySelector('video');
-    if(v) v.classList.add('fullscreen-video');
-    const overlay=pa.querySelector('.player-info-overlay');
-    if(overlay){overlay.classList.add('visible');clearTimeout(pa._overlayTimer);pa._overlayTimer=setTimeout(()=>overlay.classList.remove('visible'),3000);}
-    // 全屏时隐藏自定义全屏按钮
-    const fsBtn=pa.querySelector('.video-fs-btn');
-    if(fsBtn) fsBtn.style.display='none';
-    
-    // 移除旧控制层（如果有的话），确保每次全屏都重新创建
-    const oldCtrl=pa.querySelector('.fullscreen-controls');
-    if(oldCtrl) oldCtrl.remove();
-    
-    // 添加全屏控制覆盖层（每次全屏都创建，确保存在）
-    const controls=document.createElement('div');
-    controls.className='fullscreen-controls';
-    controls.innerHTML=`
-      <button class="fs-back-btn" onclick="exitFullscreenMode()">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
+  if(!pa) return;
+
+  // 把播放器移到body下
+  pa._originalParent = pa.parentNode;
+  pa._originalNextSibling = pa.nextSibling;
+  document.body.appendChild(pa);
+  pa.classList.add('player-fullscreen');
+  const video = pa.querySelector('video');
+  if(video) video.classList.add('fullscreen-video');
+
+  // 显示视频信息覆盖层
+  const overlay = pa.querySelector('.player-info-overlay');
+  if(overlay){overlay.classList.add('visible');clearTimeout(pa._overlayTimer);pa._overlayTimer=setTimeout(()=>overlay.classList.remove('visible'),3000);}
+
+  // 隐藏自定义全屏按钮
+  const fsBtn = pa.querySelector('.video-fs-btn');
+  if(fsBtn) fsBtn.style.display='none';
+
+  // 移除旧控制层
+  const oldCtrl = pa.querySelector('.fullscreen-controls');
+  if(oldCtrl) oldCtrl.remove();
+
+  // 视频标题
+  const videoName = currentVideo ? (currentVideo.name || currentVideo.title || '') : '';
+  const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
+  const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
+
+  // 创建新的全屏控制层
+  const controls = document.createElement('div');
+  controls.className = 'fullscreen-controls';
+  controls.innerHTML = `
+    <!-- 顶部：返回 + 视频标题 -->
+    <div class="fs-top-bar">
+      <button class="fs-back-btn" onclick="exitFullscreenMode()" title="退出全屏">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
-      <div class="fs-seek-group">
-        <button class="fs-ctrl-btn" id="fsRewindBtn">«10s</button>
-        <button class="fs-ctrl-btn" id="fsSpeedBtn">1.0x</button>
-        <button class="fs-ctrl-btn" id="fsForwardBtn">10s»</button>
+      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
+    </div>
+
+    <!-- 底部控制栏 -->
+    <div class="fs-bottom-bar">
+      <!-- 左侧：快退 / 播放暂停 / 快进 -->
+      <div class="fs-bottom-left">
+        <button class="fs-ctrl-btn fs-seek-btn" id="fsRewindBtn" title="快退${_fsSeekSec}s">«${_fsSeekSec}s</button>
+        <button class="fs-ctrl-btn fs-play-btn" id="fsPlayBtn" title="播放/暂停">▶</button>
+        <button class="fs-ctrl-btn fs-seek-btn" id="fsForwardBtn" title="快进${_fsSeekSec}s">${_fsSeekSec}s»</button>
       </div>
-      <div class="fs-ratio-group">
-        <button class="fs-ratio-btn ${currentVideoRatio==='contain'?'active':''}" data-ratio="contain" onclick="setVideoRatio('contain')">默认</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='16/9'?'active':''}" data-ratio="16/9" onclick="setVideoRatio('16/9')">16:9</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='4/3'?'active':''}" data-ratio="4/3" onclick="setVideoRatio('4/3')">4:3</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='cover'?'active':''}" data-ratio="cover" onclick="setVideoRatio('cover')">填充</button>
+      <!-- 右侧：倍速 / 比例 / 设置 -->
+      <div class="fs-bottom-right">
+        <button class="fs-ctrl-btn fs-speed-btn" id="fsSpeedBtn" title="播放倍速">${speedLabel}</button>
+        <button class="fs-ctrl-btn fs-ratio-btn" id="fsRatioBtn" title="视频比例">${ratioLabel}</button>
+        <button class="fs-ctrl-btn fs-settings-btn" id="fsSettingsBtn" title="设置">⚙</button>
       </div>
-    `;
-    pa.appendChild(controls);
-    
-    // 确保控制层始终在最上层
-    controls.style.zIndex='2147483647';
-    
-    // 绑定快退/快进/倍速按钮事件
-    bindFsControlButtons(pa);
-    
-    // 添加全屏滑动快进功能
-    addFullscreenSwipe(pa);
+    </div>
+
+    <!-- 倍速下拉（向上展开） -->
+    <div class="fs-dropdown fs-speed-dropdown" id="fsSpeedDropdown">
+      ${_fsSpeedOptions.map((s,i)=>`<button class="fs-dropdown-opt${s===_fsPlaySpeed?' active':''}" data-value="${s}">${_fsSpeedLabels[i]}</button>`).join('')}
+    </div>
+
+    <!-- 比例下拉（向上展开） -->
+    <div class="fs-dropdown fs-ratio-dropdown" id="fsRatioDropdown">
+      ${_fsRatioOptions.map(r=>`<button class="fs-dropdown-opt${r===_fsVideoRatio?' active':''}" data-value="${r}">${_fsRatioLabels[r]}</button>`).join('')}
+    </div>
+
+    <!-- 设置面板（从底部向上展开） -->
+    <div class="fs-settings-overlay" id="fsSettingsOverlay" onclick="toggleFsSettings()"></div>
+    <div class="fs-settings-panel" id="fsSettingsPanel">
+      <div class="fs-settings-handle"></div>
+      <div class="fs-settings-title">播放设置</div>
+      <div class="fs-settings-body">
+        <div class="fs-setting-row">
+          <span class="fs-setting-label">快进/快退</span>
+          <div class="fs-setting-options" data-setting="seek">
+            ${_fsSeekOptions.map(s=>`<button class="fs-setting-opt${s===_fsSeekSec?' active':''}" data-value="${s}">${s}s</button>`).join('')}
+          </div>
+        </div>
+        <div class="fs-setting-row">
+          <span class="fs-setting-label">播放倍速</span>
+          <div class="fs-setting-options" data-setting="speed">
+            ${_fsSpeedOptions.map((s,i)=>`<button class="fs-setting-opt${s===_fsPlaySpeed?' active':''}" data-value="${s}">${_fsSpeedLabels[i]}</button>`).join('')}
+          </div>
+        </div>
+        <div class="fs-setting-row">
+          <span class="fs-setting-label">视频比例</span>
+          <div class="fs-setting-options" data-setting="ratio">
+            ${_fsRatioOptions.map(r=>`<button class="fs-setting-opt${r===_fsVideoRatio?' active':''}" data-value="${r}">${_fsRatioLabels[r]}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  pa.appendChild(controls);
+  controls.style.zIndex = '2147483647';
+
+  // 应用已保存的倍速和比例
+  if(video) {
+    video.playbackRate = _fsPlaySpeed;
+    setVideoRatio(_fsVideoRatio);
   }
-  // 隐藏非播放器内容
-  if (isTvPage) {
-    const tp = document.getElementById('tvPage');
-    if (tp) {
-      tp.querySelectorAll('.tv-group-tabs,.tv-channel-area,.tv-source-bar').forEach(e=>e.style.display='none');
-    }
-  } else {
-    const dp=document.getElementById('detailPage');
-    if(dp){
-      dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(e=>e.style.display='none');
-    }
+
+  // 绑定事件
+  bindFsControlButtons(pa);
+
+  // 添加滑动快进
+  addFullscreenSwipe(pa);
+
+  // 点击视频区域显示/隐藏控制层
+  showFullscreenControls(pa);
   }
-  document.querySelectorAll('.bottom-nav').forEach(e=>e.style.display='none');
-  const sideNav=document.getElementById('sideNav');
-  if(sideNav) sideNav.style.display='none';
-  // 全屏时隐藏底部播放条
-  const miniBar = document.getElementById('miniPlayerBar');
-  if(miniBar) miniBar.style.display = 'none';
-  // 恢复播放
-  const v2=pa?pa.querySelector('video'):null;
-  if(v2&&v2.paused)v2.play().catch(()=>{});
+function showFullscreenControls(pa) {
+  const controls = pa.querySelector('.fullscreen-controls');
+  if (!controls) return;
+  controls.classList.add('visible');
+  clearTimeout(pa._ctrlTimer);
+  pa._ctrlTimer = setTimeout(() => { if(!controls.classList.contains('panel-open')) controls.classList.remove('visible'); }, 4000);
+}
+function hideFullscreenControls(pa) {
+  const controls = pa.querySelector('.fullscreen-controls');
+  if (controls && !controls.classList.contains('panel-open')) controls.classList.remove('visible');
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
@@ -302,9 +380,9 @@ function removeFullscreenCSS() {
     // 清理快退/快进定时器
     _fsSeeking = false;
     clearInterval(_fsSeekTimer);
-    // 恢复播放速度
-    _fsSpeedIdx = 2;
+    // 退出全屏时恢复默认播放速度
     if(v) v.playbackRate = 1.0;
+    _fsPlaySpeed = 1.0;
     // 恢复自定义全屏按钮
     const fsBtn=pa.querySelector('.video-fs-btn');
     if(fsBtn) fsBtn.style.display='';
@@ -354,80 +432,186 @@ function removeFullscreenCSS() {
   }
 }
 
-// ==================== 全屏快退/快进/倍速控制 ====================
+// ==================== 全屏控制按钮绑定 ====================
 let _fsSeekTimer = null;
 let _fsSeeking = false;
-let _fsSpeedIdx = 2; // 默认 1.0x
-const _fsSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-const _fsSpeedLabels = ['0.5x','0.75x','1.0x','1.25x','1.5x','2.0x'];
 
 function bindFsControlButtons(pa) {
   const video = pa.querySelector('video');
   if (!video) return;
 
-  // 快退按钮
+  // 播放/暂停按钮
+  const playBtn = pa.querySelector('#fsPlayBtn');
+  if (playBtn) {
+    const updatePlayBtn = () => { playBtn.textContent = video.paused ? '▶' : '⏸'; };
+    playBtn.addEventListener('click', () => {
+      if (video.paused) { video.play().catch(()=>{}); } else { video.pause(); }
+      updatePlayBtn();
+    });
+    video.addEventListener('play', updatePlayBtn);
+    video.addEventListener('pause', updatePlayBtn);
+    updatePlayBtn();
+  }
+
+  // 快退按钮（点击一次跳 _fsSeekSec 秒，长按连续快退）
   const rewindBtn = pa.querySelector('#fsRewindBtn');
   if (rewindBtn) {
-    const startRewind = (e) => {
-      e.preventDefault();
-      _fsSeeking = true;
-      _fsSeekVideo(video, -10);
-      clearInterval(_fsSeekTimer);
-      _fsSeekTimer = setInterval(() => {
-        if (_fsSeeking) _fsSeekVideo(video, -10);
-      }, 400);
-    };
-    const stopRewind = () => {
-      _fsSeeking = false;
-      clearInterval(_fsSeekTimer);
-    };
+    const doRewind = () => { if(video && video.duration) video.currentTime = Math.max(0, video.currentTime - _fsSeekSec); };
+    const startRewind = (e) => { e.preventDefault(); _fsSeeking = true; doRewind(); clearInterval(_fsSeekTimer); _fsSeekTimer = setInterval(()=>{ if(_fsSeeking) doRewind(); }, 400); };
+    const stopRewind = () => { _fsSeeking = false; clearInterval(_fsSeekTimer); };
     rewindBtn.addEventListener('touchstart', startRewind, {passive:false});
     rewindBtn.addEventListener('mousedown', startRewind);
-    rewindBtn.addEventListener('touchend', stopRewind);
-    rewindBtn.addEventListener('touchcancel', stopRewind);
-    rewindBtn.addEventListener('mouseup', stopRewind);
-    rewindBtn.addEventListener('mouseleave', stopRewind);
+    ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev => rewindBtn.addEventListener(ev, stopRewind));
   }
 
   // 快进按钮
   const forwardBtn = pa.querySelector('#fsForwardBtn');
   if (forwardBtn) {
-    const startForward = (e) => {
-      e.preventDefault();
-      _fsSeeking = true;
-      _fsSeekVideo(video, 10);
-      clearInterval(_fsSeekTimer);
-      _fsSeekTimer = setInterval(() => {
-        if (_fsSeeking) _fsSeekVideo(video, 10);
-      }, 400);
-    };
-    const stopForward = () => {
-      _fsSeeking = false;
-      clearInterval(_fsSeekTimer);
-    };
+    const doForward = () => { if(video && video.duration) video.currentTime = Math.min(video.duration, video.currentTime + _fsSeekSec); };
+    const startForward = (e) => { e.preventDefault(); _fsSeeking = true; doForward(); clearInterval(_fsSeekTimer); _fsSeekTimer = setInterval(()=>{ if(_fsSeeking) doForward(); }, 400); };
+    const stopForward = () => { _fsSeeking = false; clearInterval(_fsSeekTimer); };
     forwardBtn.addEventListener('touchstart', startForward, {passive:false});
     forwardBtn.addEventListener('mousedown', startForward);
-    forwardBtn.addEventListener('touchend', stopForward);
-    forwardBtn.addEventListener('touchcancel', stopForward);
-    forwardBtn.addEventListener('mouseup', stopForward);
-    forwardBtn.addEventListener('mouseleave', stopForward);
+    ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev => forwardBtn.addEventListener(ev, stopForward));
   }
 
-  // 倍速按钮 - 点击循环切换
+  // 倍速按钮 - 切换下拉
   const speedBtn = pa.querySelector('#fsSpeedBtn');
   if (speedBtn) {
     speedBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      _fsSpeedIdx = (_fsSpeedIdx + 1) % _fsSpeeds.length;
-      const speed = _fsSpeeds[_fsSpeedIdx];
-      const label = _fsSpeedLabels[_fsSpeedIdx];
-      speedBtn.textContent = label;
-      video.playbackRate = speed;
-      // 短暂高亮反馈
-      speedBtn.classList.add('active');
-      setTimeout(() => speedBtn.classList.remove('active'), 300);
+      e.stopPropagation();
+      toggleFsSpeedDropdown(pa);
     });
   }
+
+  // 比例按钮 - 切换下拉
+  const ratioBtn = pa.querySelector('#fsRatioBtn');
+  if (ratioBtn) {
+    ratioBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFsRatioDropdown(pa);
+    });
+  }
+
+  // 设置按钮
+  const settingsBtn = pa.querySelector('#fsSettingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFsSettings(pa);
+    });
+  }
+
+  // 倍速下拉选项点击
+  const speedDropdown = pa.querySelector('#fsSpeedDropdown');
+  if (speedDropdown) {
+    speedDropdown.querySelectorAll('.fs-dropdown-opt').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = parseFloat(opt.dataset.value);
+        updateFsSetting('speed', val, pa);
+        speedDropdown.classList.remove('open');
+      });
+    });
+  }
+
+  // 比例下拉选项点击
+  const ratioDropdown = pa.querySelector('#fsRatioDropdown');
+  if (ratioDropdown) {
+    ratioDropdown.querySelectorAll('.fs-dropdown-opt').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.dataset.value;
+        updateFsSetting('ratio', val, pa);
+        ratioDropdown.classList.remove('open');
+      });
+    });
+  }
+
+  // 设置面板选项点击
+  const settingsPanel = pa.querySelector('#fsSettingsPanel');
+  if (settingsPanel) {
+    settingsPanel.querySelectorAll('.fs-setting-opt').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const setting = opt.closest('.fs-setting-options').dataset.setting;
+        const val = opt.dataset.value;
+        updateFsSetting(setting, val, pa);
+      });
+    });
+  }
+}
+
+// 切换设置面板
+function toggleFsSettings(pa) {
+  const panel = pa.querySelector('#fsSettingsPanel');
+  const overlay = pa.querySelector('#fsSettingsOverlay');
+  const controls = pa.querySelector('.fullscreen-controls');
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    panel.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    if (controls) controls.classList.remove('panel-open');
+  } else {
+    panel.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+    if (controls) { controls.classList.add('panel-open'); showFullscreenControls(pa); }
+    const sd = pa.querySelector('#fsSpeedDropdown'); if(sd) sd.classList.remove('open');
+    const rd = pa.querySelector('#fsRatioDropdown'); if(rd) rd.classList.remove('open');
+  }
+}
+
+// 切换倍速下拉
+function toggleFsSpeedDropdown(pa) {
+  const dd = pa.querySelector('#fsSpeedDropdown');
+  const rd = pa.querySelector('#fsRatioDropdown');
+  const panel = pa.querySelector('#fsSettingsPanel');
+  if (rd) rd.classList.remove('open');
+  if (panel) { panel.classList.remove('open'); const ov = pa.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
+  if (dd) dd.classList.toggle('open');
+}
+
+// 切换比例下拉
+function toggleFsRatioDropdown(pa) {
+  const dd = pa.querySelector('#fsRatioDropdown');
+  const sd = pa.querySelector('#fsSpeedDropdown');
+  const panel = pa.querySelector('#fsSettingsPanel');
+  if (sd) sd.classList.remove('open');
+  if (panel) { panel.classList.remove('open'); const ov = pa.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
+  if (dd) dd.classList.toggle('open');
+}
+
+// 更新全屏设置
+function updateFsSetting(type, value, pa) {
+  const video = pa ? pa.querySelector('video') : null;
+  if (type === 'seek') {
+    _fsSeekSec = parseInt(value);
+    const rb = pa ? pa.querySelector('#fsRewindBtn') : null;
+    const fb = pa ? pa.querySelector('#fsForwardBtn') : null;
+    if (rb) rb.textContent = `«${_fsSeekSec}s`;
+    if (fb) fb.textContent = `${_fsSeekSec}s»`;
+  } else if (type === 'speed') {
+    _fsPlaySpeed = parseFloat(value);
+    if (video) video.playbackRate = _fsPlaySpeed;
+    const btn = pa ? pa.querySelector('#fsSpeedBtn') : null;
+    const idx = _fsSpeedOptions.indexOf(_fsPlaySpeed);
+    if (btn) btn.textContent = idx >= 0 ? _fsSpeedLabels[idx] : '1.0x';
+  } else if (type === 'ratio') {
+    _fsVideoRatio = value;
+    setVideoRatio(value);
+    const btn = pa ? pa.querySelector('#fsRatioBtn') : null;
+    if (btn) btn.textContent = _fsRatioLabels[value] || '默认';
+  }
+  // 更新活跃状态
+  const key = type === 'seek' ? 'seek' : type === 'speed' ? 'speed' : 'ratio';
+  const containers = pa ? pa.querySelectorAll(`[data-setting="${key}"]`) : [];
+  containers.forEach(container => {
+    container.querySelectorAll('.fs-setting-opt,.fs-dropdown-opt').forEach(o => {
+      o.classList.toggle('active', o.dataset.value == value);
+    });
+  });
+  saveFsSettings();
 }
 
 function _fsSeekVideo(video, delta) {
@@ -446,12 +630,29 @@ function addFullscreenSwipe(playerArea) {
   let hasMoved = false;
   
   const isTouchOutsideControls = (clientX, clientY) => {
-    const controls = playerArea.querySelector('.fullscreen-controls');
-    if (controls) {
-      const rect = controls.getBoundingClientRect();
-      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-        return false;
-      }
+    // 检查顶部栏
+    const topBar = playerArea.querySelector('.fs-top-bar');
+    if (topBar) {
+      const rect = topBar.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
+    }
+    // 检查底部控制栏
+    const bottomBar = playerArea.querySelector('.fs-bottom-bar');
+    if (bottomBar) {
+      const rect = bottomBar.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
+    }
+    // 检查已打开的下拉
+    const dds = playerArea.querySelectorAll('.fs-dropdown.open');
+    for (let i = 0; i < dds.length; i++) {
+      const rect = dds[i].getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
+    }
+    // 检查已打开的设置面板
+    const panel = playerArea.querySelector('.fs-settings-panel.open');
+    if (panel) {
+      const rect = panel.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
     }
     return true;
   };
@@ -550,10 +751,20 @@ function setVideoRatio(ratio) {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
-  
-  // 更新按钮状态
+
+  // 更新旧版按钮状态（兼容原生全屏）
   document.querySelectorAll('.fs-ratio-btn').forEach(b => b.classList.toggle('active', b.dataset.ratio === ratio));
-  
+  // 更新新版底部栏比例按钮文字
+  const ratioBtn = pa ? pa.querySelector('#fsRatioBtn') : null;
+  if (ratioBtn) ratioBtn.textContent = _fsRatioLabels[ratio] || '默认';
+  // 更新下拉选项活跃状态
+  const dds = document.querySelectorAll(`[data-setting="ratio"]`);
+  dds.forEach(container => {
+    container.querySelectorAll('.fs-dropdown-opt,.fs-setting-opt').forEach(o => {
+      o.classList.toggle('active', o.dataset.value === ratio);
+    });
+  });
+
   switch(ratio) {
     case 'contain':
       v.style.objectFit = 'contain';
