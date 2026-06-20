@@ -221,6 +221,13 @@ function enterFullscreenMode() {
     try { YunShaoNative.hideSystemUI(); } catch (e) {}
   }
 }
+
+function fmt(seconds) {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
 function exitFullscreenMode() {
   removeFullscreenCSS();
 
@@ -277,6 +284,17 @@ function applyFullscreenCSS() {
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
       <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
+    <!-- 进度条 -->
+    <div class="fs-progress-bar">
+      <span class="fs-time-current" id="fsTimeCurrent">0:00</span>
+      <div class="fs-progress-track" id="fsProgressTrack">
+        <div class="fs-progress-played" id="fsProgressPlayed"></div>
+        <div class="fs-progress-handle" id="fsProgressHandle"></div>
+      </div>
+      <span class="fs-time-total" id="fsTimeTotal">0:00</span>
+    </div>
+
+    
     </div>
 
     <!-- 底部控制栏 -->
@@ -363,6 +381,7 @@ function hideFullscreenControls(pa) {
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
+  clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
   document.body.classList.remove('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
