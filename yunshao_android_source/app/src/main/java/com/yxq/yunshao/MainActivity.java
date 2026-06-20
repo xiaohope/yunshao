@@ -243,58 +243,35 @@ public class MainActivity extends Activity {
                     updateRatioButtons(ratio);
                 });
             }
+
+            // ========== 全屏系统UI控制（CSS全屏方案使用）==========
+            // 进入全屏：隐藏系统栏
+            @JavascriptInterface
+            public void hideSystemUI() {
+                runOnUiThread(() -> hideSystemBars());
+            }
+
+            // 退出全屏：恢复系统栏
+            @JavascriptInterface
+            public void showSystemUI() {
+                runOnUiThread(() -> {
+                    showSystemBars();
+                    // 恢复状态栏样式
+                    if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
+                });
+            }
         }, "YunShaoNative");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
-                // 标准全屏模式：显示WebView提供的视频视图
-                if (isFullscreen) {
-                    callback.onCustomViewHidden();
-                    return;
-                }
-                isFullscreen = true;
-                customViewCallback = callback;
-                customView = view;
-                
-                // 竖屏视频保持竖屏，横屏视频切横屏
-                setRequestedOrientation(isPortraitVideo ? 
-                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT : 
-                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-                hideSystemBars();
-                
-                // 状态栏隐藏在hideSystemBars()中统一处理
-                
-                // 隐藏WebView内容（用INVISIBLE而非GONE，保留Surface使视频继续渲染，进度条才能更新）
-                webView.setVisibility(View.INVISIBLE);
-                
-                // 将全屏容器从rootView移到DecorView，不受系统insets约束
-                rootView.removeView(fullscreenContainer);
-                FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
-                FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                );
-                decorView.addView(fullscreenContainer, lp);
-                
-                // 将视频视图加入全屏容器
-                fullscreenContainer.removeAllViews();
-                FrameLayout.LayoutParams videoParams = new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                );
-                videoParams.gravity = Gravity.CENTER;
-                fullscreenContainer.addView(view, videoParams);
-                
-                // 添加原生控制层
-                addFullscreenControls();
-                
-                fullscreenContainer.setVisibility(View.VISIBLE);
+                // CSS全屏方案：禁用原生全屏，直接返回
+                callback.onCustomViewHidden();
             }
 
             @Override
             public void onHideCustomView() {
-                exitFullscreenInternal();
+                // CSS全屏方案：不再使用原生全屏
             }
         });
 
@@ -922,7 +899,19 @@ public class MainActivity extends Activity {
     private void showSystemBars() {
         Window window = getWindow();
         View decorView = window.getDecorView();
-        decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+
+        // 清除全屏flags
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+
+        // 恢复系统UI可见性
+        int flags = View.SYSTEM_UI_FLAG_VISIBLE;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!isDarkTheme) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            }
+        }
+        decorView.setSystemUiVisibility(flags);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {

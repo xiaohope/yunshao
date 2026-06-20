@@ -212,18 +212,21 @@ function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
-  const isPortrait = v.videoHeight > v.videoWidth;
-  if(window.YunShaoNative){
-    YunShaoNative.enterFullscreen(isPortrait);
-  } else {
-    applyFullscreenCSS();
+
+  // CSS全屏方案：统一走applyFullscreenCSS，不再触发原生全屏
+  applyFullscreenCSS();
+
+  // 通知原生隐藏系统栏（状态栏+导航栏），实现真正的全屏沉浸感
+  if (window.YunShaoNative && window.YunShaoNative.hideSystemUI) {
+    try { YunShaoNative.hideSystemUI(); } catch (e) {}
   }
 }
 function exitFullscreenMode() {
-  if(window.YunShaoNative){
-    YunShaoNative.exitFullscreen();
-  } else {
-    removeFullscreenCSS();
+  removeFullscreenCSS();
+
+  // 通知原生恢复系统栏
+  if (window.YunShaoNative && window.YunShaoNative.showSystemUI) {
+    try { YunShaoNative.showSystemUI(); } catch (e) {}
   }
 }
 
