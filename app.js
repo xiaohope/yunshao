@@ -213,10 +213,6 @@ function enterFullscreenMode() {
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
   const isPortrait = v.videoHeight > v.videoWidth;
-  
-  // 关键：在调用原生全屏前，先设置视频标题
-  window.__currentVideoName = currentVideo ? currentVideo.vod_name : '';
-  
   if(window.YunShaoNative){
     YunShaoNative.enterFullscreen(isPortrait);
   } else {
@@ -263,23 +259,8 @@ function applyFullscreenCSS() {
   const oldCtrl = pa.querySelector('.fullscreen-controls');
   if(oldCtrl) oldCtrl.remove();
 
-  // 视频标题 - 从多个来源获取
-  let videoName = '';
-  if (currentVideo && (currentVideo.name || currentVideo.title)) {
-    videoName = currentVideo.name || currentVideo.title;
-  }
-  if (!videoName) {
-    const titleEl = document.querySelector('.detail-info h1, .detail-info .title, .video-card.active .card-title, .player-info-overlay .video-name');
-    if (titleEl) videoName = titleEl.textContent.trim();
-  }
-  if (!videoName) {
-    if (video) {
-      videoName = video.getAttribute('title') || video.getAttribute('alt') || '';
-    }
-  }
-  if (!videoName) videoName = '未知视频';
-  window.__currentVideoName = videoName; // 供原生全屏读取标题
-  const safeName = videoName.replace(/"/g, '&quot;');
+  // 视频标题
+  const videoName = currentVideo ? (currentVideo.name || currentVideo.title || '') : '';
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
 
@@ -292,25 +273,19 @@ function applyFullscreenCSS() {
       <button class="fs-back-btn" onclick="exitFullscreenMode()" title="退出全屏">
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
-      <div class="fs-title" title="${safeName}">${videoName}</div>
-    </div>
-
-    <!-- 进度条 -->
-    <div class="fs-progress-bar" id="fsProgressBar">
-      <div class="fs-progress-played" id="fsProgressPlayed"></div>
-      <div class="fs-progress-handle" id="fsProgressHandle"></div>
+      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
     </div>
 
     <!-- 底部控制栏 -->
     <div class="fs-bottom-bar">
-      <!-- 左侧：播放/暂停 -->
+      <!-- 左侧：快退 / 播放暂停 / 快进 -->
       <div class="fs-bottom-left">
+        <button class="fs-ctrl-btn fs-seek-btn" id="fsRewindBtn" title="快退${_fsSeekSec}s">«${_fsSeekSec}s</button>
         <button class="fs-ctrl-btn fs-play-btn" id="fsPlayBtn" title="播放/暂停">▶</button>
+        <button class="fs-ctrl-btn fs-seek-btn" id="fsForwardBtn" title="快进${_fsSeekSec}s">${_fsSeekSec}s»</button>
       </div>
-      <!-- 右侧：快退 / 快进 / 倍速 / 比例 / 设置 -->
+      <!-- 右侧：倍速 / 比例 / 设置 -->
       <div class="fs-bottom-right">
-        <button class="fs-ctrl-btn fs-seek-btn" id="fsRewindBtn" title="快退${_fsSeekSec}秒">«${_fsSeekSec}s</button>
-        <button class="fs-ctrl-btn fs-seek-btn" id="fsForwardBtn" title="快进${_fsSeekSec}秒">${_fsSeekSec}s»</button>
         <button class="fs-ctrl-btn fs-speed-btn" id="fsSpeedBtn" title="播放倍速">${speedLabel}</button>
         <button class="fs-ctrl-btn fs-ratio-btn" id="fsRatioBtn" title="视频比例">${ratioLabel}</button>
         <button class="fs-ctrl-btn fs-settings-btn" id="fsSettingsBtn" title="设置">⚙</button>
@@ -369,60 +344,7 @@ function applyFullscreenCSS() {
   // 添加滑动快进
   addFullscreenSwipe(pa);
 
-  
-
-  // ==================== 进度条 ====================
-  const progressBar = pa.querySelector('#fsProgressBar');
-  const progressPlayed = pa.querySelector('#fsProgressPlayed');
-  const progressHandle = pa.querySelector('#fsProgressHandle');
-
-  function updateProgress() {
-    if (!video || !progressPlayed) return;
-    if (video.duration && isFinite(video.duration) && video.duration > 0) {
-      const pct = video.currentTime / video.duration;
-      progressPlayed.style.width = (pct * 100) + '%';
-      if (progressHandle) progressHandle.style.left = (pct * 100) + '%';
-    } else {
-      progressPlayed.style.width = '0%';
-      if (progressHandle) progressHandle.style.left = '0%';
-    }
-  }
-
-  // 点击/拖拽进度条跳转
-  if (progressBar) {
-    const seekFromEvent = (e) => {
-      if (!video || !video.duration) return;
-      const rect = progressBar.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      video.currentTime = pct * video.duration;
-      updateProgress();
-    };
-    progressBar.addEventListener('click', seekFromEvent);
-    progressBar.addEventListener('touchstart', (e) => {
-      seekFromEvent(e);
-      const onMove = (ev) => seekFromEvent(ev);
-      const onEnd = () => { document.removeEventListener('touchmove', onMove); document.removeEventListener('touchend', onEnd); };
-      document.addEventListener('touchmove', onMove, {passive:false});
-      document.addEventListener('touchend', onEnd);
-    }, {passive:false});
-    progressBar.addEventListener('mousedown', (e) => {
-      seekFromEvent(e);
-      const onMove = (ev) => seekFromEvent(ev);
-      const onEnd = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onEnd); };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onEnd);
-    });
-  }
-
-  // 定时更新进度条
-  clearInterval(pa._progressTimer);
-  pa._progressTimer = setInterval(updateProgress, 500);
-  video.addEventListener('timeupdate', updateProgress);
-  video.addEventListener('loadedmetadata', updateProgress);
-  updateProgress();
-
-// 点击视频区域显示/隐藏控制层
+  // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
   }
 function showFullscreenControls(pa) {
@@ -458,8 +380,6 @@ function removeFullscreenCSS() {
     // 清理快退/快进定时器
     _fsSeeking = false;
     clearInterval(_fsSeekTimer);
-    // 清理进度条定时器
-    clearInterval(pa._progressTimer);
     // 退出全屏时恢复默认播放速度
     if(v) v.playbackRate = 1.0;
     _fsPlaySpeed = 1.0;
@@ -4202,7 +4122,6 @@ function goToPlayFromInfo() {
 }
 
 async function openPlayPage(v) {
-  window.__currentVideoName = v.vod_name || v.title || ''; // 供原生全屏读取标题
   document.getElementById('detailTitle').textContent=v.vod_name;
   document.getElementById('infoTitle').textContent=v.vod_name;
   document.getElementById('episodesCard').style.display='none';
