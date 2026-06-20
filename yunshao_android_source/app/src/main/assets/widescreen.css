@@ -411,14 +411,32 @@ body.layout-narrow .page.active {
 
   /* 横版：section-card减小内边距，释放更多空间给网格 */
   .section-card {
-    margin: 8px 8px !important;
-    padding: 10px 8px !important;
+    margin: 6px 6px !important;
+    padding: 8px 6px !important;
   }
 
-  /* 桌面版热门推荐与短剧/电影卡片完全一致 */
+  /* ======== 热门推荐卡片：强制与短剧/电影完全一致的紧凑尺寸 ======== */
   #homePage #hotGrid {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 12px !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  #homePage #hotGrid .video-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
+    flex: none !important;
+  }
+
+  #homePage #hotGrid .video-card-poster {
+    aspect-ratio: 2/3 !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
   }
 
   /* 只显示当前激活的tab面板，其他保持隐藏 */
@@ -914,19 +932,20 @@ body.layout-narrow .page.active {
      首页内容网格调整 - 更多列
      ============================================ */
   .rec-grid-2 {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
   }
 
   .rec-grid-3 {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 12px !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
   }
 
   /* 热门推荐和短剧/电影用完全相同的网格 */
   #homePage #hotGrid {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    gap: 12px !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
   }
 
   /* 视频卡片横版适配 - 更紧凑 */
@@ -936,6 +955,18 @@ body.layout-narrow .page.active {
     min-width: 0 !important;
     flex: none !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+
+  /* 热门推荐卡片：确保和短剧/电影完全一样的尺寸 */
+  #homePage #hotGrid .video-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: none !important;
+  }
+
+  #homePage #hotGrid .video-card-poster {
+    aspect-ratio: 2/3 !important;
   }
   
   /* 横版视频卡片-海报略缩小 */
@@ -1075,15 +1106,17 @@ body.layout-narrow .page.active {
 
     .rec-grid-2 {
       grid-template-columns: repeat(6, 1fr) !important;
+      gap: 10px !important;
     }
 
     .rec-grid-3 {
       grid-template-columns: repeat(6, 1fr) !important;
+      gap: 10px !important;
     }
 
     #homePage #hotGrid {
       grid-template-columns: repeat(6, 1fr) !important;
-      gap: 12px !important;
+      gap: 10px !important;
     }
 
     .cat-list-view {
@@ -1108,15 +1141,17 @@ body.layout-narrow .page.active {
 
     .rec-grid-2 {
       grid-template-columns: repeat(7, 1fr) !important;
+      gap: 10px !important;
     }
 
     .rec-grid-3 {
       grid-template-columns: repeat(7, 1fr) !important;
+      gap: 10px !important;
     }
 
     #homePage #hotGrid {
       grid-template-columns: repeat(7, 1fr) !important;
-      gap: 12px !important;
+      gap: 10px !important;
     }
 
     .cat-list-view {

@@ -625,7 +625,8 @@ public class MainActivity extends Activity {
         if (!isFullscreen) return;
         isFullscreen = false;
         handler.removeCallbacksAndMessages(null);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        // 不再强制竖屏！让设备保持当前方向（平板横屏时退出全屏不应切回竖屏）
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         
         // 清除全屏flags，恢复状态栏区域
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -655,14 +656,15 @@ public class MainActivity extends Activity {
         
         showSystemBars();
         
-        // 通知JS退出全屏状态
+        // 通知JS退出全屏状态，并重新触发布局检测（恢复横屏模式）
         webView.evaluateJavascript(
             "if(typeof isCSSFullscreen!=='undefined'){isCSSFullscreen=false;}" +
             "var pa=document.getElementById('playerArea');if(pa){pa.classList.remove('player-fullscreen');}" +
             "var dp=document.getElementById('detailPage');if(dp){dp.style.overflow='';dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(function(e){e.style.display='';});}" +
             "document.querySelectorAll('.bottom-nav').forEach(function(e){e.style.display='';});" +
             "var v=document.querySelector('#playerArea video');if(v){v.classList.remove('fullscreen-video');v.style.objectFit='';v.style.aspectRatio='';v.style.width='';v.style.height='';}" +
-            "if(typeof isPlaying!=='undefined'&&isPlaying){var mb=document.getElementById('miniPlayerBar');if(mb){mb.style.display='';}}",
+            "if(typeof isPlaying!=='undefined'&&isPlaying){var mb=document.getElementById('miniPlayerBar');if(mb){mb.style.display='';}}" +
+            "if(typeof applyLayout==='function')applyLayout(localStorage.getItem('ys_layout')||'auto');",
             null
         );
         
