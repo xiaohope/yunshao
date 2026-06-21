@@ -507,6 +507,26 @@ video::-webkit-media-controls-fullscreen-button {
   display: none !important;
 }
 
+/* ★关键：隐藏 X5 同层播放器的原生控制栏（进度条/播放按钮等）
+   X5 同层播放器（x5-video-player-type='h5-page'）会叠加原生控件，
+   无法通过 video.controls=false 隐藏，只能用 CSS 伪元素强制隐藏。
+   参考：X5同层播放器应用实践（知乎）- 建议屏蔽原生控制栏自行开发 */
+video::-webkit-media-controls,
+video::-webkit-media-controls-panel,
+video::-webkit-media-controls-play-button,
+video::-webkit-media-controls-timeline,
+video::-webkit-media-controls-current-time-display,
+video::-webkit-media-controls-time-remaining-display,
+video::-webkit-media-controls-mute-button,
+video::-webkit-media-controls-toggle-closed-captions-button,
+video::-webkit-media-controls-volume-slider,
+.fullscreen-video::-webkit-media-controls,
+.fullscreen-video::-webkit-media-controls-panel {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* 自定义视频全屏按钮（替代原生全屏按钮） */
 .video-fs-btn {
   position: absolute;
