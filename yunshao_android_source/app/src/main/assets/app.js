@@ -312,12 +312,6 @@ function applyFullscreenCSS() {
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
 
-  // 底部遮罩：挡住原生播放器进度条（约60px高）
-  const fsBottomMask = document.createElement("div");
-  fsBottomMask.className = "_fsBottomMask";
-  fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:65px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
-  pa.appendChild(fsBottomMask);
-
   // 创建新的全屏控制层
   const controls = document.createElement('div');
   controls.className = 'fullscreen-controls';
@@ -488,8 +482,6 @@ function removeFullscreenCSS() {
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
-    const bottomMask = pa.querySelector("._fsBottomMask");
-    if(bottomMask) bottomMask.remove();
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
@@ -1897,8 +1889,6 @@ function cleanupPlayer(){
   const pa=document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
-    const bottomMask = pa.querySelector("._fsBottomMask");
-    if(bottomMask) bottomMask.remove();
     if(pa._progressTimer)clearInterval(pa._progressTimer);
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
   }
