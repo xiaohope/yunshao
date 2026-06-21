@@ -271,24 +271,18 @@ function applyFullscreenCSS() {
   const controls = document.createElement('div');
   controls.className = 'fullscreen-controls';
   controls.innerHTML = `
-    <!-- 顶部：返回 + 视频标题 -->
+    <!-- 顶部控制栏：返回 + 快退/播放/快进 + 倍速/比例/设置 -->
     <div class="fs-top-bar">
       <button class="fs-back-btn" onclick="exitFullscreenMode()" title="退出全屏">
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
-      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
-    </div>
-
-    <!-- 底部控制栏 -->
-    <div class="fs-bottom-bar">
-      <!-- 左侧：快退 / 播放暂停 / 快进 -->
-      <div class="fs-bottom-left">
+      <div class="fs-seek-group">
         <button class="fs-ctrl-btn fs-seek-btn" id="fsRewindBtn" title="快退${_fsSeekSec}s">«${_fsSeekSec}s</button>
         <button class="fs-ctrl-btn fs-play-btn" id="fsPlayBtn" title="播放/暂停">▶</button>
         <button class="fs-ctrl-btn fs-seek-btn" id="fsForwardBtn" title="快进${_fsSeekSec}s">${_fsSeekSec}s»</button>
       </div>
-      <!-- 右侧：倍速 / 比例 / 设置 -->
-      <div class="fs-bottom-right">
+      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
+      <div class="fs-right-group">
         <button class="fs-ctrl-btn fs-speed-btn" id="fsSpeedBtn" title="播放倍速">${speedLabel}</button>
         <button class="fs-ctrl-btn fs-ratio-btn" id="fsRatioBtn" title="视频比例">${ratioLabel}</button>
         <button class="fs-ctrl-btn fs-settings-btn" id="fsSettingsBtn" title="设置">⚙</button>
