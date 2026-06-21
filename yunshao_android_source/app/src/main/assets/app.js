@@ -311,12 +311,6 @@ function applyFullscreenCSS() {
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
 
-  // 创建黑色半透明遮罩挡住原生进度条
-  const fsOverlay = document.createElement("div");
-  fsOverlay.className = "_fsOverlay";
-  fsOverlay.style.cssText = "position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;pointer-events:none;";
-  pa.appendChild(fsOverlay);
-
   // 创建新的全屏控制层
   const controls = document.createElement('div');
   controls.className = 'fullscreen-controls';
@@ -487,7 +481,6 @@ function removeFullscreenCSS() {
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
-    const fsOverlay = pa.querySelector("._fsOverlay");
     if(fsOverlay) fsOverlay.remove();
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
