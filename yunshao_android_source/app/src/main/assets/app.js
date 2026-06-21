@@ -469,7 +469,15 @@ function applyFullscreenCSS() {
     if (dx*dx + dy*dy < 100) {
       // 移动距离 < 10px，判定为点击
       if (e.target && e.target.closest && e.target.closest('.fullscreen-controls')) return;
-      showFullscreenControls(pa);
+      // 切换控制层显示/隐藏
+      const ctrl = pa.querySelector('.fullscreen-controls');
+      if (ctrl) {
+        if (ctrl.classList.contains('visible')) {
+          ctrl.classList.remove('visible');
+        } else {
+          ctrl.classList.add('visible');
+        }
+      }
     }
   };
   pa.addEventListener('touchend', pa._fsTouchHandler, { passive: true });
@@ -479,7 +487,7 @@ function showFullscreenControls(pa) {
   if (!controls) return;
   controls.classList.add('visible');
   clearTimeout(pa._ctrlTimer);
-  pa._ctrlTimer = setTimeout(() => { if(!controls.classList.contains('panel-open')) controls.classList.remove('visible'); }, 4000);
+  // 不再自动隐藏——用户点击屏幕切换显示/隐藏
 }
 function hideFullscreenControls(pa) {
   const controls = pa.querySelector('.fullscreen-controls');
