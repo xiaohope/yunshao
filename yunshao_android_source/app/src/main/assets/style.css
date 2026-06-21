@@ -685,8 +685,9 @@ body.fs-mode .video-fs-btn {
 }
 
 /* ==================== 全屏控制层（新版布局） ==================== */
+/* position:fixed 而非 absolute：脱离父元素 overflow:hidden 的裁剪约束 */
 .fullscreen-controls {
-  position: absolute;
+  position: fixed !important;
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: 2147483647 !important;
   display: none;
