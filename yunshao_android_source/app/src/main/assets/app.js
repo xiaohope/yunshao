@@ -311,6 +311,12 @@ function applyFullscreenCSS() {
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
 
+  // 底部遮罩：挡住原生播放器进度条（约60px高）
+  const fsBottomMask = document.createElement("div");
+  fsBottomMask.className = "_fsBottomMask";
+  fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:55px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
+  // 先添加到pa，之后会移到controls内部
+
   // 创建新的全屏控制层
   const controls = document.createElement('div');
   controls.className = 'fullscreen-controls';
@@ -388,6 +394,9 @@ function applyFullscreenCSS() {
     </div>
   `;
   pa.appendChild(controls);
+  // 把底部遮罩移到controls内部（随controls显示/隐藏）
+  const bm = pa.querySelector("._fsBottomMask");
+  if (bm && controls) { bm.remove(); controls.insertBefore(bm, controls.firstChild); }
   controls.style.zIndex = "2147483647";
   // 隐藏原生视频控制器
   const fsStyle = document.getElementById("_fsHideControls");
@@ -481,7 +490,9 @@ function removeFullscreenCSS() {
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
-    if(fsOverlay) fsOverlay.remove();
+    const bottomMask = pa.querySelector("._fsBottomMask");
+    if(bottomMask) bottomMask.remove();
+
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
     if(v) v.classList.remove('fullscreen-video');
@@ -794,6 +805,12 @@ function addFullscreenSwipe(playerArea) {
     const panel = playerArea.querySelector('.fs-settings-panel.open');
     if (panel) {
       const rect = panel.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
+    }
+    // 检查进度条
+    const progressBar = playerArea.querySelector(".fs-progress-bar");
+    if (progressBar) {
+      const rect = progressBar.getBoundingClientRect();
       if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
     }
     return true;
@@ -1270,6 +1287,12 @@ function renderHomeTabData(items, state) {
     const key = v.vod_name + '_' + (v.vod_year || 0);
     if (seen.has(key)) return false;
     seen.add(key);
+    // 检查进度条
+    const progressBar = playerArea.querySelector(".fs-progress-bar");
+    if (progressBar) {
+      const rect = progressBar.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
+    }
     return true;
   });
   
@@ -1499,6 +1522,12 @@ function filterCatData(list){
       const vy=v.vod_year?''+v.vod_year:'';
       if(year==='00'){if(vy&&vy.length===4&&parseInt(vy)<2018)return true;return false;}
       if(vy!==year) return false;
+    }
+    // 检查进度条
+    const progressBar = playerArea.querySelector(".fs-progress-bar");
+    if (progressBar) {
+      const rect = progressBar.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
     }
     return true;
   });
@@ -1869,6 +1898,8 @@ function cleanupPlayer(){
   const pa=document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
+    const bottomMask = pa.querySelector("._fsBottomMask");
+    if(bottomMask) bottomMask.remove();
     if(pa._progressTimer)clearInterval(pa._progressTimer);
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
   }
