@@ -211,7 +211,7 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -293,7 +293,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.setAttribute("x5-video-player-fullscreen", "false"); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -493,7 +493,7 @@ function removeFullscreenCSS() {
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
-    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; }
+    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; v.setAttribute('x5-video-player-fullscreen', 'true'); }
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
@@ -907,7 +907,7 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
