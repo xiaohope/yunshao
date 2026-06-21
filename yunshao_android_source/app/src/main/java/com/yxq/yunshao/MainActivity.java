@@ -273,7 +273,8 @@ public class MainActivity extends Activity {
                             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
                             break;
                         default:
-                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                            // 用 SENSOR 而不是 UNSPECIFIED，确保立即恢复自动旋转
+                            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
                             break;
                     }
                 });

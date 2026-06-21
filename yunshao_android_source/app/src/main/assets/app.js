@@ -411,6 +411,14 @@ function applyFullscreenCSS() {
 
   // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
+
+  // 全屏区域点击：控制层隐藏后点击任意位置重新显示
+  if (pa._fsClickHandler) pa.removeEventListener('click', pa._fsClickHandler);
+  pa._fsClickHandler = function(e) {
+    if (e.target.closest('.fullscreen-controls')) return;
+    showFullscreenControls(pa);
+  };
+  pa.addEventListener('click', pa._fsClickHandler);
   }
 function showFullscreenControls(pa) {
   const controls = pa.querySelector('.fullscreen-controls');
