@@ -292,7 +292,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) video.classList.add('fullscreen-video');
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.setAttribute("controlslist", "nodownload"); video.setAttribute("disablePictureInPicture", ""); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -310,6 +310,12 @@ function applyFullscreenCSS() {
   const videoName = currentVideo ? (currentVideo.name || currentVideo.title || '') : '';
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
+
+  // 创建黑色半透明遮罩挡住原生进度条
+  const fsOverlay = document.createElement("div");
+  fsOverlay.className = "_fsOverlay";
+  fsOverlay.style.cssText = "position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:10000;pointer-events:none;";
+  pa.appendChild(fsOverlay);
 
   // 创建新的全屏控制层
   const controls = document.createElement('div');
@@ -361,7 +367,7 @@ function applyFullscreenCSS() {
     </div>
 
     <!-- 设置面板（从底部向上展开） -->
-    <div class="fs-settings-overlay" id="fsSettingsOverlay" class="fs-settings-overlay" id="fsSettingsOverlay"></div>
+    <div class="fs-settings-overlay" id="fsSettingsOverlay" onclick="toggleFsSettings()"></div>
     <div class="fs-settings-panel" id="fsSettingsPanel">
       <div class="fs-settings-handle"></div>
       <div class="fs-settings-title">播放设置</div>
@@ -388,7 +394,15 @@ function applyFullscreenCSS() {
     </div>
   `;
   pa.appendChild(controls);
-  controls.style.zIndex = '2147483647';
+  controls.style.zIndex = "2147483647";
+  // 隐藏原生视频控制器
+  const fsStyle = document.getElementById("_fsHideControls");
+  if (!fsStyle) {
+    const s = document.createElement("style");
+    s.id = "_fsHideControls";
+    s.textContent = "video::-webkit-media-controls{display:none!important}video::-internal-media-controls{display:none!important}video{--media-controls-height:0!important}";
+    document.head.appendChild(s);
+  }
 
   // 应用已保存的倍速和比例
   if(video) {
@@ -467,11 +481,14 @@ function hideFullscreenControls(pa) {
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
-  clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
+
   document.body.classList.remove('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
+    clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
+    const fsOverlay = pa.querySelector("._fsOverlay");
+    if(fsOverlay) fsOverlay.remove();
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
     if(v) v.classList.remove('fullscreen-video');
@@ -1858,6 +1875,7 @@ function renderAllSources() {
 function cleanupPlayer(){
   const pa=document.getElementById('playerArea');
   if(pa){
+    clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
     if(pa._progressTimer)clearInterval(pa._progressTimer);
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
   }
