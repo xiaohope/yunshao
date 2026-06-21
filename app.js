@@ -211,7 +211,7 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -293,7 +293,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.setAttribute("x5-video-player-fullscreen", "false"); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.setAttribute("x5-video-player-type", "h5-page"); video.setAttribute("x5-video-player-fullscreen", "false"); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -485,7 +485,7 @@ function removeFullscreenCSS() {
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
-    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; v.setAttribute('x5-video-player-fullscreen', 'true'); }
+    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; }
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
@@ -899,7 +899,7 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
@@ -1915,7 +1915,7 @@ function playCurrent() {
   video.controls=false;video.autoplay=true;video.playsInline=true;
   video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none';
   video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
-  video.setAttribute('x5-playsinline','');video.setAttribute('x5-video-player-type','h5');video.setAttribute('x5-video-player-fullscreen','true');
+  video.setAttribute('x5-playsinline','');video.setAttribute('x5-video-player-type','h5-page');video.setAttribute('x5-video-player-fullscreen','false');
   pa.innerHTML='';pa.appendChild(video);
   
   // 播放信息覆盖层
@@ -3884,8 +3884,8 @@ function playLiveChannel(name, url) {
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
   video.setAttribute('x5-playsinline', '');
-  video.setAttribute('x5-video-player-type', 'h5');
-  video.setAttribute('x5-video-player-fullscreen', 'true');
+  video.setAttribute('x5-video-player-type', 'h5-page');
+  video.setAttribute('x5-video-player-fullscreen', 'false');
   pa.innerHTML = '';
   pa.appendChild(video);
   
