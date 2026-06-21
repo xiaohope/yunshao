@@ -270,12 +270,8 @@ function exitFullscreenMode() {
     try { YunShaoNative.showSystemUI(); } catch (e) {}
   }
 
-  // pop 掉之前 pushState 的状态，让返回键行为正常
-  setTimeout(() => {
-    if (history.state && history.state.fs) {
-      history.back();
-    }
-  }, 100);
+  // 不再调用 history.back()：popstate 事件本身已处理回退
+  // Java onBackPressed 也直接通过 evaluateJavascript 处理了返回键
 }
 
 // ==================== CSS全屏控制 ====================
@@ -328,7 +324,7 @@ function applyFullscreenCSS() {
     
     </div>
 
-    <!-- 进度条 -->
+    <!-- 底部：进度条 + 控制栏 -->
     <div class="fs-progress-bar">
       <span class="fs-time-current" id="fsTimeCurrent">0:00</span>
       <div class="fs-progress-track" id="fsProgressTrack">
@@ -336,9 +332,6 @@ function applyFullscreenCSS() {
         <div class="fs-progress-handle" id="fsProgressHandle"></div>
       </div>
       <span class="fs-time-total" id="fsTimeTotal">0:00</span>
-    </div>
-
-    
     </div>
 
     <!-- 底部控制栏 -->
@@ -368,7 +361,7 @@ function applyFullscreenCSS() {
     </div>
 
     <!-- 设置面板（从底部向上展开） -->
-    <div class="fs-settings-overlay" id="fsSettingsOverlay" onclick="toggleFsSettings()"></div>
+    <div class="fs-settings-overlay" id="fsSettingsOverlay" class="fs-settings-overlay" id="fsSettingsOverlay"></div>
     <div class="fs-settings-panel" id="fsSettingsPanel">
       <div class="fs-settings-handle"></div>
       <div class="fs-settings-title">播放设置</div>
@@ -411,6 +404,30 @@ function applyFullscreenCSS() {
 
   // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
+
+  // 全屏进度条定时更新
+  clearInterval(pa._fsProgressTimer);
+  pa._fsProgressTimer = setInterval(() => {
+    const v = pa.querySelector('video');
+    const played = pa.querySelector('#fsProgressPlayed');
+    const current = pa.querySelector('#fsTimeCurrent');
+    const total = pa.querySelector('#fsTimeTotal');
+    if (v && played && !v.paused) {
+      const pct = v.duration > 0 ? (v.currentTime / v.duration * 100) : 0;
+      played.style.width = pct + '%';
+    }
+    if (v && current) {
+      const m = Math.floor((v.currentTime || 0) / 60);
+      const s = Math.floor((v.currentTime || 0) % 60);
+      current.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    if (v && total) {
+      const m = Math.floor((v.duration || 0) / 60);
+      const s = Math.floor((v.duration || 0) % 60);
+      total.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    }
+  }, 200);
+
 
   // 全屏区域触摸：控制层隐藏后触摸重新显示
   // 用 touchend + 移动距离判断，绕过 gestureLayer 的 click 拦截
@@ -629,12 +646,34 @@ function bindFsControlButtons(pa) {
         const val = opt.dataset.value;
         updateFsSetting(setting, val, pa);
       });
+
+  // 全屏进度条拖动 seek
+  const progressTrack = pa.querySelector('#fsProgressTrack');
+  if (progressTrack && video) {
+    let isDragging = false;
+    function updateSeek(clientX) {
+      const rect = progressTrack.getBoundingClientRect();
+      let ratio = (clientX - rect.left) / rect.width;
+      ratio = Math.max(0, Math.min(1, ratio));
+      if (video.duration) {
+        video.currentTime = ratio * video.duration;
+      }
+    }
+    // 鼠标事件
+    progressTrack.addEventListener('mousedown', (e) => { isDragging = true; updateSeek(e.clientX); e.preventDefault(); });
+    document.addEventListener('mousemove', (e) => { if (isDragging) { updateSeek(e.clientX); } });
+    document.addEventListener('mouseup', () => { isDragging = false; });
+    // 触摸事件
+    progressTrack.addEventListener('touchstart', (e) => { isDragging = true; updateSeek(e.touches[0].clientX); }, {passive:true});
+    progressTrack.addEventListener('touchmove', (e) => { if (isDragging) { updateSeek(e.touches[0].clientX); } }, {passive:true});
+    progressTrack.addEventListener('touchend', () => { isDragging = false; }, {passive:true});
+  }
     });
   }
 }
 
 // 切换设置面板
-function toggleFsSettings(pa) {
+function toggleFsSettings(_pa) { const pa = _pa || (currentPage==="tvPage"?document.getElementById("tvPlayerArea"):document.getElementById("playerArea")); if (!pa) return;
   const panel = pa.querySelector('#fsSettingsPanel');
   const overlay = pa.querySelector('#fsSettingsOverlay');
   const controls = pa.querySelector('.fullscreen-controls');
