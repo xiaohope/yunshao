@@ -1943,7 +1943,7 @@ function playCurrent() {
   
   // 点击视频区域切换overlay显示/隐藏
   let overlayVisible=true,overlayTimer=null;
-  function showOverlay(){overlayVisible=true;infoOverlay.classList.add('visible');if(isCSSFullscreen){video.controls=true;var fc=pa.querySelector('.fullscreen-controls');if(fc)fc.style.display='';}clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc2=pa.querySelector('.fullscreen-controls');if(fc2)fc2.style.display='none';}},3000);}
+  function showOverlay(){overlayVisible=true;infoOverlay.classList.add('visible');if(isCSSFullscreen){var fc=pa.querySelector('.fullscreen-controls');if(fc)fc.style.display='';}clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc2=pa.querySelector('.fullscreen-controls');if(fc2)fc2.style.display='none';}},3000);}
   function hideOverlay(){overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc3=pa.querySelector('.fullscreen-controls');if(fc3)fc3.style.display='none';}clearTimeout(overlayTimer);}
   showOverlay();
   let lastTap=0;
@@ -3885,7 +3885,7 @@ function playLiveChannel(name, url) {
   
   // 创建video元素（和playCurrent一样的配置）
   const video = document.createElement('video');
-  video.controls = true;
+  video.controls = false;
   video.autoplay = true;
   video.playsInline = true;
   video.style.cssText = 'width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1';
