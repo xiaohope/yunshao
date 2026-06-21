@@ -211,7 +211,7 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5'); v.setAttribute('x5-video-player-fullscreen', 'true'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -240,8 +240,14 @@ function enterFullscreenMode() {
     }, 500);
   }
 
-  // CSS全屏方案：统一走applyFullscreenCSS，不再触发原生全屏
+  // 方案A：CSS全屏布局 + 触发X5原生全屏（进度条3秒后自动隐藏）
   applyFullscreenCSS();
+
+  // 触发原生全屏：onShowCustomView叠加原生控制层
+  const isPortraitVideo = v.videoHeight > v.videoWidth;
+  if (window.YunShaoNative && window.YunShaoNative.enterFullscreen) {
+    try { YunShaoNative.enterFullscreen(isPortraitVideo); } catch (e) {}
+  }
 
   // 通知原生隐藏系统栏（状态栏+导航栏），实现真正的全屏沉浸感
   if (window.YunShaoNative && window.YunShaoNative.hideSystemUI) {
@@ -259,6 +265,11 @@ function fmt(seconds) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 function exitFullscreenMode() {
+  // 触发原生全屏退出（onHideCustomView → exitFullscreenInternal）
+  if (window.YunShaoNative && window.YunShaoNative.exitFullscreen) {
+    try { YunShaoNative.exitFullscreen(); } catch (e) {}
+  }
+
   removeFullscreenCSS();
 
   // 恢复自动旋转
@@ -899,7 +910,7 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5'); v.setAttribute('x5-video-player-fullscreen', 'true'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
@@ -1915,7 +1926,7 @@ function playCurrent() {
   video.controls=false;video.autoplay=true;video.playsInline=true;
   video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none';
   video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
-  video.setAttribute('x5-video-player-type','h5-page');video.setAttribute('x5-video-player-fullscreen','false');
+  video.setAttribute('x5-video-player-type','h5');video.setAttribute('x5-video-player-fullscreen','true');
   pa.innerHTML='';pa.appendChild(video);
   
   // 播放信息覆盖层
@@ -3883,8 +3894,8 @@ function playLiveChannel(name, url) {
   video.style.cssText = 'width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1';
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-  video.setAttribute('x5-video-player-type', 'h5-page');
-  video.setAttribute('x5-video-player-fullscreen', 'false');
+  video.setAttribute('x5-video-player-type', 'h5');
+  video.setAttribute('x5-video-player-fullscreen', 'true');
   pa.innerHTML = '';
   pa.appendChild(video);
   

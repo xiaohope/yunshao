@@ -284,13 +284,54 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
-                // CSS全屏方案：禁用原生全屏，直接返回
-                callback.onCustomViewHidden();
+                // 方案A：原生全屏 + 自定义原生控制层叠加
+                // X5同层播放器模式下，视频元素留在WebView DOM中，
+                // 原生进度条显示3秒后自动隐藏（X5沉浸式行为）
+                customViewCallback = callback;
+                customView = view;
+                isFullscreen = true;
+
+                // 根据视频方向设置屏幕方向
+                if (isPortraitVideo) {
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                } else {
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+                }
+
+                // 将全屏容器移到DecorView（最顶层，覆盖所有内容包括系统栏）
+                FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
+                rootView.removeView(fullscreenContainer);
+                decorView.addView(fullscreenContainer, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                ));
+
+                // 视频View放最底层
+                fullscreenContainer.removeAllViews();
+                fullscreenContainer.addView(view, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                ));
+
+                fullscreenContainer.setVisibility(View.VISIBLE);
+
+                // 叠加原生控制层（返回按钮、进度条、倍速、比例等）
+                addFullscreenControls();
+
+                // 隐藏系统栏
+                hideSystemBars();
+
+                // 通知JS进入全屏状态（让CSS全屏的副作用保持兼容）
+                webView.evaluateJavascript(
+                    "if(typeof isCSSFullscreen!=='undefined'){isCSSFullscreen=true;}",
+                    null
+                );
             }
 
             @Override
             public void onHideCustomView() {
-                // CSS全屏方案：不再使用原生全屏
+                // X5通知退出自定义视图时，触发退出全屏
+                exitFullscreenInternal();
             }
         });
 
@@ -764,9 +805,17 @@ public class MainActivity extends Activity {
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
-        // 移除全屏内容
+        // 移除全屏内容（包括原生控件和视频View）
         fullscreenContainer.removeAllViews();
         fullscreenContainer.setVisibility(View.GONE);
+        // 清空原生控件引用（下次addFullscreenControls会重建）
+        topBarView = null;
+        bottomBar = null;
+        touchLayerView = null;
+        seekBar = null;
+        timeText = null;
+        playPauseBtn = null;
+        speedBtn = null;
         
         // 将全屏容器从DecorView移回rootView
         FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
