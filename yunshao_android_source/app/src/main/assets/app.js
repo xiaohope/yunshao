@@ -314,8 +314,8 @@ function applyFullscreenCSS() {
   const fsBtn = pa.querySelector('.video-fs-btn');
   if(fsBtn) fsBtn.style.display='none';
 
-  // 移除旧控制层
-  const oldCtrl = pa.querySelector('.fullscreen-controls');
+  // 移除旧控制层（可能在上一次全屏残留，已挂载到 body）
+  const oldCtrl = document.querySelector('.fullscreen-controls');
   if(oldCtrl) oldCtrl.remove();
 
   // 视频标题
@@ -399,7 +399,9 @@ function applyFullscreenCSS() {
       </div>
     </div>
   `;
-  pa.appendChild(controls);
+  // 挂载到 body 而非 pa，彻底脱离 .player-fullscreen 的 overflow:hidden 约束
+  // （某些 X5 WebView 版本即使 position:fixed 也会被父元素 overflow:hidden 裁切）
+  document.body.appendChild(controls);
   controls.style.zIndex = "2147483647";
   // 隐藏原生视频控制器
   const fsStyle = document.getElementById("_fsHideControls");
@@ -429,9 +431,9 @@ function applyFullscreenCSS() {
   clearInterval(pa._fsProgressTimer);
   pa._fsProgressTimer = setInterval(() => {
     const v = pa.querySelector('video');
-    const played = pa.querySelector('#fsProgressPlayed');
-    const current = pa.querySelector('#fsTimeCurrent');
-    const total = pa.querySelector('#fsTimeTotal');
+    const played = document.querySelector('#fsProgressPlayed');
+    const current = document.querySelector('#fsTimeCurrent');
+    const total = document.querySelector('#fsTimeTotal');
     if (v && played && !v.paused) {
       const pct = v.duration > 0 ? (v.currentTime / v.duration * 100) : 0;
       played.style.width = pct + '%';
@@ -470,7 +472,7 @@ function applyFullscreenCSS() {
       // 移动距离 < 10px，判定为点击
       if (e.target && e.target.closest && e.target.closest('.fullscreen-controls')) return;
       // 切换控制层显示/隐藏
-      const ctrl = pa.querySelector('.fullscreen-controls');
+      const ctrl = document.querySelector('.fullscreen-controls');
       if (ctrl) {
         if (ctrl.classList.contains('visible')) {
           ctrl.classList.remove('visible');
@@ -483,14 +485,14 @@ function applyFullscreenCSS() {
   pa.addEventListener('touchend', pa._fsTouchHandler, { passive: true });
   }
 function showFullscreenControls(pa) {
-  const controls = pa.querySelector('.fullscreen-controls');
+  const controls = document.querySelector('.fullscreen-controls');
   if (!controls) return;
   controls.classList.add('visible');
   clearTimeout(pa._ctrlTimer);
   // 不再自动隐藏——用户点击屏幕切换显示/隐藏
 }
 function hideFullscreenControls(pa) {
-  const controls = pa.querySelector('.fullscreen-controls');
+  const controls = document.querySelector('.fullscreen-controls');
   if (controls && !controls.classList.contains('panel-open')) controls.classList.remove('visible');
 }
 function removeFullscreenCSS() {
@@ -506,7 +508,7 @@ function removeFullscreenCSS() {
     const v=pa.querySelector('video');
     if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; }
     // 移除全屏控制覆盖层
-    const fc=pa.querySelector('.fullscreen-controls');
+    const fc=document.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
     // 移除滑动快进事件监听
     if (pa._swipeHandler) {
@@ -579,7 +581,7 @@ function bindFsControlButtons(pa) {
   if (!video) return;
 
   // 播放/暂停按钮
-  const playBtn = pa.querySelector('#fsPlayBtn');
+  const playBtn = document.querySelector('#fsPlayBtn');
   if (playBtn) {
     const updatePlayBtn = () => { playBtn.textContent = video.paused ? '▶' : '⏸'; };
     playBtn.addEventListener('click', () => {
@@ -592,7 +594,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 快退按钮（点击一次跳 _fsSeekSec 秒，长按连续快退）
-  const rewindBtn = pa.querySelector('#fsRewindBtn');
+  const rewindBtn = document.querySelector('#fsRewindBtn');
   if (rewindBtn) {
     const doRewind = () => { if(video && video.duration) video.currentTime = Math.max(0, video.currentTime - _fsSeekSec); };
     const startRewind = (e) => { e.preventDefault(); _fsSeeking = true; doRewind(); clearInterval(_fsSeekTimer); _fsSeekTimer = setInterval(()=>{ if(_fsSeeking) doRewind(); }, 400); };
@@ -603,7 +605,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 快进按钮
-  const forwardBtn = pa.querySelector('#fsForwardBtn');
+  const forwardBtn = document.querySelector('#fsForwardBtn');
   if (forwardBtn) {
     const doForward = () => { if(video && video.duration) video.currentTime = Math.min(video.duration, video.currentTime + _fsSeekSec); };
     const startForward = (e) => { e.preventDefault(); _fsSeeking = true; doForward(); clearInterval(_fsSeekTimer); _fsSeekTimer = setInterval(()=>{ if(_fsSeeking) doForward(); }, 400); };
@@ -614,7 +616,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 倍速按钮 - 切换下拉
-  const speedBtn = pa.querySelector('#fsSpeedBtn');
+  const speedBtn = document.querySelector('#fsSpeedBtn');
   if (speedBtn) {
     speedBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -623,7 +625,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 比例按钮 - 切换下拉
-  const ratioBtn = pa.querySelector('#fsRatioBtn');
+  const ratioBtn = document.querySelector('#fsRatioBtn');
   if (ratioBtn) {
     ratioBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -632,7 +634,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 设置按钮
-  const settingsBtn = pa.querySelector('#fsSettingsBtn');
+  const settingsBtn = document.querySelector('#fsSettingsBtn');
   if (settingsBtn) {
     settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -641,7 +643,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 倍速下拉选项点击
-  const speedDropdown = pa.querySelector('#fsSpeedDropdown');
+  const speedDropdown = document.querySelector('#fsSpeedDropdown');
   if (speedDropdown) {
     speedDropdown.querySelectorAll('.fs-dropdown-opt').forEach(opt => {
       opt.addEventListener('click', (e) => {
@@ -654,7 +656,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 比例下拉选项点击
-  const ratioDropdown = pa.querySelector('#fsRatioDropdown');
+  const ratioDropdown = document.querySelector('#fsRatioDropdown');
   if (ratioDropdown) {
     ratioDropdown.querySelectorAll('.fs-dropdown-opt').forEach(opt => {
       opt.addEventListener('click', (e) => {
@@ -667,7 +669,7 @@ function bindFsControlButtons(pa) {
   }
 
   // 设置面板选项点击
-  const settingsPanel = pa.querySelector('#fsSettingsPanel');
+  const settingsPanel = document.querySelector('#fsSettingsPanel');
   if (settingsPanel) {
     settingsPanel.querySelectorAll('.fs-setting-opt').forEach(opt => {
       opt.addEventListener('click', (e) => {
@@ -678,7 +680,7 @@ function bindFsControlButtons(pa) {
       });
 
   // 全屏进度条拖动 seek
-  const progressTrack = pa.querySelector('#fsProgressTrack');
+  const progressTrack = document.querySelector('#fsProgressTrack');
   if (progressTrack && video) {
     let isDragging = false;
     function updateSeek(clientX) {
@@ -704,9 +706,9 @@ function bindFsControlButtons(pa) {
 
 // 切换设置面板
 function toggleFsSettings(_pa) { const pa = _pa || (currentPage==="tvPage"?document.getElementById("tvPlayerArea"):document.getElementById("playerArea")); if (!pa) return;
-  const panel = pa.querySelector('#fsSettingsPanel');
-  const overlay = pa.querySelector('#fsSettingsOverlay');
-  const controls = pa.querySelector('.fullscreen-controls');
+  const panel = document.querySelector('#fsSettingsPanel');
+  const overlay = document.querySelector('#fsSettingsOverlay');
+  const controls = document.querySelector('.fullscreen-controls');
   if (!panel) return;
   const isOpen = panel.classList.contains('open');
   if (isOpen) {
@@ -719,28 +721,28 @@ function toggleFsSettings(_pa) { const pa = _pa || (currentPage==="tvPage"?docum
     panel.classList.add('open');
     if (overlay) overlay.classList.add('open');
     if (controls) { controls.classList.add('panel-open'); showFullscreenControls(pa); }
-    const sd = pa.querySelector('#fsSpeedDropdown'); if(sd) sd.classList.remove('open');
-    const rd = pa.querySelector('#fsRatioDropdown'); if(rd) rd.classList.remove('open');
+    const sd = document.querySelector('#fsSpeedDropdown'); if(sd) sd.classList.remove('open');
+    const rd = document.querySelector('#fsRatioDropdown'); if(rd) rd.classList.remove('open');
   }
 }
 
 // 切换倍速下拉
 function toggleFsSpeedDropdown(pa) {
-  const dd = pa.querySelector('#fsSpeedDropdown');
-  const rd = pa.querySelector('#fsRatioDropdown');
-  const panel = pa.querySelector('#fsSettingsPanel');
+  const dd = document.querySelector('#fsSpeedDropdown');
+  const rd = document.querySelector('#fsRatioDropdown');
+  const panel = document.querySelector('#fsSettingsPanel');
   if (rd) rd.classList.remove('open');
-  if (panel) { panel.classList.remove('open'); const ov = pa.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
+  if (panel) { panel.classList.remove('open'); const ov = document.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
   if (dd) dd.classList.toggle('open');
 }
 
 // 切换比例下拉
 function toggleFsRatioDropdown(pa) {
-  const dd = pa.querySelector('#fsRatioDropdown');
-  const sd = pa.querySelector('#fsSpeedDropdown');
-  const panel = pa.querySelector('#fsSettingsPanel');
+  const dd = document.querySelector('#fsRatioDropdown');
+  const sd = document.querySelector('#fsSpeedDropdown');
+  const panel = document.querySelector('#fsSettingsPanel');
   if (sd) sd.classList.remove('open');
-  if (panel) { panel.classList.remove('open'); const ov = pa.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
+  if (panel) { panel.classList.remove('open'); const ov = document.querySelector('#fsSettingsOverlay'); if(ov) ov.classList.remove('open'); }
   if (dd) dd.classList.toggle('open');
 }
 
@@ -749,25 +751,25 @@ function updateFsSetting(type, value, pa) {
   const video = pa ? pa.querySelector('video') : null;
   if (type === 'seek') {
     _fsSeekSec = parseInt(value);
-    const rb = pa ? pa.querySelector('#fsRewindBtn') : null;
-    const fb = pa ? pa.querySelector('#fsForwardBtn') : null;
+    const rb = document.querySelector('#fsRewindBtn');
+    const fb = document.querySelector('#fsForwardBtn');
     if (rb) rb.textContent = `«${_fsSeekSec}s`;
     if (fb) fb.textContent = `${_fsSeekSec}s»`;
   } else if (type === 'speed') {
     _fsPlaySpeed = parseFloat(value);
     if (video) video.playbackRate = _fsPlaySpeed;
-    const btn = pa ? pa.querySelector('#fsSpeedBtn') : null;
+    const btn = document.querySelector('#fsSpeedBtn');
     const idx = _fsSpeedOptions.indexOf(_fsPlaySpeed);
     if (btn) btn.textContent = idx >= 0 ? _fsSpeedLabels[idx] : '1.0x';
   } else if (type === 'ratio') {
     _fsVideoRatio = value;
     setVideoRatio(value);
-    const btn = pa ? pa.querySelector('#fsRatioBtn') : null;
+    const btn = document.querySelector('#fsRatioBtn');
     if (btn) btn.textContent = _fsRatioLabels[value] || '默认';
   }
   // 更新活跃状态
   const key = type === 'seek' ? 'seek' : type === 'speed' ? 'speed' : 'ratio';
-  const containers = pa ? pa.querySelectorAll(`[data-setting="${key}"]`) : [];
+  const containers = document.querySelectorAll(`[data-setting="${key}"]`);
   containers.forEach(container => {
     container.querySelectorAll('.fs-setting-opt,.fs-dropdown-opt').forEach(o => {
       o.classList.toggle('active', o.dataset.value == value);
@@ -793,13 +795,13 @@ function addFullscreenSwipe(playerArea) {
   
   const isTouchOutsideControls = (clientX, clientY) => {
     // 检查顶部栏
-    const topBar = playerArea.querySelector('.fs-top-bar');
+    const topBar = document.querySelector('.fs-top-bar');
     if (topBar) {
       const rect = topBar.getBoundingClientRect();
       if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
     }
     // 检查底部控制栏
-    const bottomBar = playerArea.querySelector('.fs-bottom-bar');
+    const bottomBar = document.querySelector('.fs-bottom-bar');
     if (bottomBar) {
       const rect = bottomBar.getBoundingClientRect();
       if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return false;
@@ -924,7 +926,7 @@ function setVideoRatio(ratio) {
   // 更新旧版按钮状态（兼容原生全屏）
   document.querySelectorAll('.fs-ratio-btn').forEach(b => b.classList.toggle('active', b.dataset.ratio === ratio));
   // 更新新版底部栏比例按钮文字
-  const ratioBtn = pa ? pa.querySelector('#fsRatioBtn') : null;
+  const ratioBtn = document.querySelector('#fsRatioBtn');
   if (ratioBtn) ratioBtn.textContent = _fsRatioLabels[ratio] || '默认';
   // 更新下拉选项活跃状态
   const dds = document.querySelectorAll(`[data-setting="ratio"]`);
