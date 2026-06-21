@@ -293,7 +293,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -316,7 +316,7 @@ function applyFullscreenCSS() {
   const fsBottomMask = document.createElement("div");
   fsBottomMask.className = "_fsBottomMask";
   fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:65px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
-  // 先添加到pa，之后会移到controls内部
+  pa.appendChild(fsBottomMask);
 
   // 创建新的全屏控制层
   const controls = document.createElement('div');
@@ -493,7 +493,7 @@ function removeFullscreenCSS() {
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
-    if(v) v.classList.remove('fullscreen-video');
+    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; }
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
