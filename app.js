@@ -314,7 +314,7 @@ function applyFullscreenCSS() {
   // 底部遮罩：挡住原生播放器进度条（约60px高）
   const fsBottomMask = document.createElement("div");
   fsBottomMask.className = "_fsBottomMask";
-  fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:55px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
+  fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:65px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
   // 先添加到pa，之后会移到controls内部
 
   // 创建新的全屏控制层
@@ -394,16 +394,13 @@ function applyFullscreenCSS() {
     </div>
   `;
   pa.appendChild(controls);
-  // 把底部遮罩移到controls内部（随controls显示/隐藏）
-  const bm = pa.querySelector("._fsBottomMask");
-  if (bm && controls) { bm.remove(); controls.insertBefore(bm, controls.firstChild); }
   controls.style.zIndex = "2147483647";
   // 隐藏原生视频控制器
   const fsStyle = document.getElementById("_fsHideControls");
   if (!fsStyle) {
     const s = document.createElement("style");
     s.id = "_fsHideControls";
-    s.textContent = "video::-webkit-media-controls{display:none!important}video::-internal-media-controls{display:none!important}video{--media-controls-height:0!important}";
+    s.textContent = 'video::-webkit-media-controls{display:none!important}video::-webkit-media-controls-enclosure{display:none!important}video::-webkit-media-controls-panel{display:none!important}video::-webkit-media-controls-overlay-enclosure{display:none!important}video::-webkit-media-controls-timeline{display:none!important}video::-webkit-media-controls-current-time-display{display:none!important}video::-webkit-media-controls-time-remaining-display{display:none!important}video::-webkit-media-controls-toggle-closedcaptions-button{display:none!important}video::-webkit-media-controls-fullscreen-button{display:none!important}video::-webkit-media-controls-volume-control-container{display:none!important}video::-webkit-media-controls-mute-button{display:none!important}video::-webkit-media-controls-play-button{display:none!important}video::-internal-media-controls{display:none!important}video{--media-controls-height:0!important;pointer-events:auto}';
     document.head.appendChild(s);
   }
 
