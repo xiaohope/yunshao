@@ -211,7 +211,7 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5'); v.setAttribute('x5-video-player-fullscreen', 'true'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -910,7 +910,7 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5'); v.setAttribute('x5-video-player-fullscreen', 'true'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
@@ -1922,12 +1922,11 @@ function playCurrent() {
   const startOverlay = document.getElementById('playerStartOverlay');
   if(startOverlay) startOverlay.style.display = 'none';
   
-  const video=document.createElement('video');
-  video.controls=false;video.autoplay=true;video.playsInline=true;
-  video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none';
-  video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
-  video.setAttribute('x5-video-player-type','h5');video.setAttribute('x5-video-player-fullscreen','true');
-  pa.innerHTML='';pa.appendChild(video);
+  // 用 innerHTML 创建 video，确保 x5 属性在 HTML 解析时存在
+  // 'h5-page' 模式：X5 不干预，走标准 HTML5 控制栏，controls=false 可隐藏
+  pa.innerHTML='<video id="mainVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none;" autoplay></video>';
+  const video=pa.querySelector('#mainVideo');
+  video.controls=false;video.autoplay=true;
   
   // 播放信息覆盖层
   const infoOverlay=document.createElement('div');
@@ -3886,18 +3885,11 @@ function playLiveChannel(name, url) {
   const placeholder = document.getElementById('tvPlayerPlaceholder');
   if (placeholder) placeholder.style.display = 'none';
   
-  // 创建video元素（和playCurrent一样的配置）
-  const video = document.createElement('video');
+  // 创建video元素（用innerHTML确保x5属性在解析时存在）
+  pa.innerHTML = '<video id="tvVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1;" autoplay></video>';
+  const video = pa.querySelector('#tvVideo');
   video.controls = false;
-  video.autoplay = true;
-  video.playsInline = true;
-  video.style.cssText = 'width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1';
-  video.setAttribute('playsinline', '');
-  video.setAttribute('webkit-playsinline', '');
-  video.setAttribute('x5-video-player-type', 'h5');
-  video.setAttribute('x5-video-player-fullscreen', 'true');
-  pa.innerHTML = '';
-  pa.appendChild(video);
+  if (url && url.indexOf('m3u8') >= 0) video.setAttribute('type', 'application/x-mpegURL');
   
   // 播放信息overlay（LIVE标记+频道名，和详情页player-info-overlay一样）
   const safeName = name.replace(/"/g, '').replace(/tvg-\w+\s*=\s*/gi, '').replace(/https?:\/\/\S+/gi, '').trim();

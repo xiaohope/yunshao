@@ -8,8 +8,8 @@ android {
         applicationId "com.yxq.yunshao3"
         minSdk 21
         targetSdk 33
-        versionCode 59
-        versionName "3.18.0"
+        versionCode 60
+        versionName "3.18.1"
     }
     signingConfigs {
         release {
