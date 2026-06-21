@@ -1953,8 +1953,8 @@ function playCurrent() {
   
   // 点击视频区域切换overlay显示/隐藏
   let overlayVisible=true,overlayTimer=null;
-  function showOverlay(){overlayVisible=true;infoOverlay.classList.add('visible');if(isCSSFullscreen){var fc=pa.querySelector('.fullscreen-controls');if(fc)fc.style.display='';}clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc2=pa.querySelector('.fullscreen-controls');if(fc2)fc2.style.display='none';}},3000);}
-  function hideOverlay(){overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc3=pa.querySelector('.fullscreen-controls');if(fc3)fc3.style.display='none';}clearTimeout(overlayTimer);}
+  function showOverlay(){overlayVisible=true;infoOverlay.classList.add('visible');clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{overlayVisible=false;infoOverlay.classList.remove('visible');},3000);}
+  function hideOverlay(){overlayVisible=false;infoOverlay.classList.remove('visible');clearTimeout(overlayTimer);}
   showOverlay();
   let lastTap=0;
   video.addEventListener('click',e=>{const now=Date.now();if(now-lastTap<300){if(!isCSSFullscreen)enterFullscreenMode();e.preventDefault();}else{if(overlayVisible)hideOverlay();else showOverlay();}lastTap=now;});
