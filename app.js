@@ -412,13 +412,30 @@ function applyFullscreenCSS() {
   // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
 
-  // 全屏区域点击：控制层隐藏后点击任意位置重新显示
-  if (pa._fsClickHandler) pa.removeEventListener('click', pa._fsClickHandler);
-  pa._fsClickHandler = function(e) {
-    if (e.target.closest('.fullscreen-controls')) return;
-    showFullscreenControls(pa);
+  // 全屏区域触摸：控制层隐藏后触摸重新显示
+  // 用 touchend + 移动距离判断，绕过 gestureLayer 的 click 拦截
+  if (pa._fsTouchHandler) { pa.removeEventListener('touchend', pa._fsTouchHandler); }
+  pa._fsTouchStartX = null;
+  pa._fsTouchStartY = null;
+  pa.addEventListener('touchstart', function(e) {
+    if (e.touches && e.touches.length === 1) {
+      pa._fsTouchStartX = e.touches[0].clientX;
+      pa._fsTouchStartY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+  pa._fsTouchHandler = function(e) {
+    if (!pa._fsTouchStartX && pa._fsTouchStartX !== 0) return;
+    const cx = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : pa._fsTouchStartX;
+    const cy = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : pa._fsTouchStartY;
+    const dx = cx - pa._fsTouchStartX;
+    const dy = cy - pa._fsTouchStartY;
+    if (dx*dx + dy*dy < 100) {
+      // 移动距离 < 10px，判定为点击
+      if (e.target && e.target.closest && e.target.closest('.fullscreen-controls')) return;
+      showFullscreenControls(pa);
+    }
   };
-  pa.addEventListener('click', pa._fsClickHandler);
+  pa.addEventListener('touchend', pa._fsTouchHandler, { passive: true });
   }
 function showFullscreenControls(pa) {
   const controls = pa.querySelector('.fullscreen-controls');
