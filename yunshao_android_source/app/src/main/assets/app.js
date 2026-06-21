@@ -1915,7 +1915,7 @@ function playCurrent() {
   video.controls=false;video.autoplay=true;video.playsInline=true;
   video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none';
   video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
-  video.setAttribute('x5-playsinline','');video.setAttribute('x5-video-player-type','h5-page');video.setAttribute('x5-video-player-fullscreen','false');
+  video.setAttribute('x5-video-player-type','h5-page');video.setAttribute('x5-video-player-fullscreen','false');
   pa.innerHTML='';pa.appendChild(video);
   
   // 播放信息覆盖层
@@ -3883,7 +3883,6 @@ function playLiveChannel(name, url) {
   video.style.cssText = 'width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1';
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
-  video.setAttribute('x5-playsinline', '');
   video.setAttribute('x5-video-player-type', 'h5-page');
   video.setAttribute('x5-video-player-fullscreen', 'false');
   pa.innerHTML = '';
