@@ -185,10 +185,20 @@ public class MainActivity extends Activity {
             
             private void enterFullscreenWithOrientation(boolean isPortrait) {
                 runOnUiThread(() -> {
-                    // 记住视频方向，onShowCustomView中会用
+                    isFullscreen = true;
                     isPortraitVideo = isPortrait;
+                    // v3.20: 根据视频画幅自动旋转屏幕方向
+                    // 横屏视频 → 强制横屏 (SENSOR_LANDSCAPE 允许 180° 翻转)
+                    // 竖屏视频 → 强制竖屏
+                    if (isPortrait) {
+                        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                    } else {
+                        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+                    }
+                    // 隐藏系统栏 + 走 CSS 全屏方案（不再依赖 onShowCustomView）
+                    hideSystemBars();
                     webView.evaluateJavascript(
-                        "var v=document.querySelector('#playerArea video')||document.querySelector('#tvPlayerArea video');if(v){if(v.requestFullscreen)v.requestFullscreen();else if(v.webkitRequestFullscreen)v.webkitRequestFullscreen();}",
+                        "if(typeof applyFullscreenCSS==='function')applyFullscreenCSS();",
                         null
                     );
                 });

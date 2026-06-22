@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.20.1 (Plyr集成修复) ====================
+// ==================== 云梢 v3.21.0 (全屏自动方向) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -186,6 +186,8 @@ function enterFullscreenMode() {
   const v = pa ? pa.querySelector('video') : null;
   if (!v) return;
   const isPortrait = v.videoHeight > v.videoWidth;
+  // 保存方向到"当前全屏"上下文中（applyFullscreenCSS/removeFullscreenCSS 使用）
+  window._fsIsPortrait = isPortrait;
   if(window.YunShaoNative){
     YunShaoNative.enterFullscreen(isPortrait);
   } else {
@@ -240,6 +242,12 @@ function applyFullscreenCSS() {
   // 恢复播放
   const v2=pa?pa.querySelector('video'):null;
   if(v2&&v2.paused)v2.play().catch(()=>{});
+  
+  // Web 端：锁定屏幕方向（根据视频画幅）
+  if (!window.YunShaoNative && screen.orientation && screen.orientation.lock) {
+    var orient = window._fsIsPortrait ? 'portrait' : 'landscape';
+    screen.orientation.lock(orient).catch(function(){});
+  }
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
@@ -276,6 +284,11 @@ function removeFullscreenCSS() {
     const miniBar = document.getElementById('miniPlayerBar');
     if(miniBar) miniBar.style.display = '';
   }
+  // Web 端：解锁屏幕方向，还原到初始方向
+  if (!window.YunShaoNative && screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+  window._fsIsPortrait = false;
 }
 
 // ==================== 视频比例切换 ====================
