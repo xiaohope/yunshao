@@ -1,4 +1,4 @@
-/* ==================== 云梢 v3.5.1 ==================== */
+/* ==================== 云梢 v3.21.1 ==================== */
 /* 影视流媒体APP设计规范 - Dark Mode (OLED) + Motion-Driven */
 
 /* 加载旋转图标动画 */
@@ -534,6 +534,28 @@ body.theme-dark .section-card {
 /* Plyr 全屏按钮 - 我们的自定义按钮样式 */
 .detail-player .plyr__control[data-plyr="fullscreen"] {
   margin-left: auto !important;
+}
+
+/* v3.22: 快进快退按钮 — 醒目样式 */
+.ys-seek-btn {
+  background: rgba(255,255,255,0.12) !important;
+  border-radius: 6px !important;
+  margin: 0 3px !important;
+  min-width: 44px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.ys-seek-btn:active,
+.ys-seek-btn:hover {
+  background: rgba(255,255,255,0.25) !important;
+}
+/* 全屏时按钮更大 */
+.player-fullscreen .ys-seek-btn {
+  min-width: 56px !important;
+  height: 40px !important;
+  margin: 0 6px !important;
 }
 
 .detail-player video { 

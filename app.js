@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.21.1 (全屏返回修复 + 快进快退 + 控制栏自动隐藏) ====================
+// ==================== 云梢 v3.22 (全屏返回修复 + 滑动手势 + 按钮醒目) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -209,6 +209,8 @@ function exitFullscreenMode() {
 // 3. Java层会把--status-bar-h设为0并隐藏系统栏
 function applyFullscreenCSS() {
   isCSSFullscreen=true;
+  // v3.22: 推入 history 状态，拦截浏览器/系统返回键
+  history.pushState({_ysFullscreen: true}, '', location.href);
   document.body.classList.add('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
@@ -251,13 +253,21 @@ function applyFullscreenCSS() {
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
+  // v3.22: 回退全屏时推入的 history state，避免返回键需要多按一次
+  if (history.state && history.state._ysFullscreen) {
+    history.back();
+  }
   document.body.classList.remove('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
-    if(v) v.classList.remove('fullscreen-video');
+    if(v) {
+      v.classList.remove('fullscreen-video');
+      // 重置内联样式
+      v.style.objectFit=''; v.style.aspectRatio=''; v.style.width=''; v.style.height='';
+    }
     // 移除全屏退出按钮
     var exitBtn = pa.querySelector('.fs-exit-btn');
     if(exitBtn) exitBtn.remove();
@@ -269,6 +279,9 @@ function removeFullscreenCSS() {
       delete pa._originalParent;
       delete pa._originalNextSibling;
     }
+    // 恢复 detailPage overflow（Plyr 可能需要）
+    const dp=document.getElementById('detailPage');
+    if(dp) dp.style.overflow='';
   }
   if (isTvPage) {
     const tp = document.getElementById('tvPage');
@@ -289,6 +302,8 @@ function removeFullscreenCSS() {
     screen.orientation.unlock();
   }
   window._fsIsPortrait = false;
+  // 触发布局恢复
+  if(typeof applyLayout==='function') applyLayout(localStorage.getItem('ys_layout')||'auto');
 }
 
 // ==================== 视频比例切换 ====================
@@ -1364,8 +1379,8 @@ function _addPlyrCustomButtons(pa, player, video) {
   // -- 快退 10s 按钮 --
   var rewindBtn = document.createElement('button');
   rewindBtn.type = 'button';
-  rewindBtn.className = 'plyr__controls__item plyr__control';
-  rewindBtn.innerHTML = '<span style="font-size:14px;line-height:1">\u00AB10s</span>';
+  rewindBtn.className = 'plyr__controls__item plyr__control ys-seek-btn ys-rewind-btn';
+  rewindBtn.innerHTML = '<span style="font-weight:bold;font-size:16px;line-height:1;color:#fff">\u00AB10s</span>';
   rewindBtn.setAttribute('aria-label', '后退10秒');
   var rewindTimer = null;
   function startRewind(e) {
@@ -1386,8 +1401,8 @@ function _addPlyrCustomButtons(pa, player, video) {
   // -- 快进 10s 按钮 --
   var forwardBtn = document.createElement('button');
   forwardBtn.type = 'button';
-  forwardBtn.className = 'plyr__controls__item plyr__control';
-  forwardBtn.innerHTML = '<span style="font-size:14px;line-height:1">10s\u00BB</span>';
+  forwardBtn.className = 'plyr__controls__item plyr__control ys-seek-btn ys-forward-btn';
+  forwardBtn.innerHTML = '<span style="font-weight:bold;font-size:16px;line-height:1;color:#fff">10s\u00BB</span>';
   forwardBtn.setAttribute('aria-label', '前进10秒');
   var forwardTimer = null;
   function startForward(e) {
@@ -1429,6 +1444,39 @@ function _addPlyrCustomButtons(pa, player, video) {
   }
   // 全屏按钮放到控制栏末尾
   controls.appendChild(fsBtn);
+
+  // ===== v3.22: 滑动手势快进快退 =====
+  // 在视频区域检测水平滑动：左滑快退10s，右滑快进10s
+  (function setupSwipeSeek() {
+    var touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    var swipeHandled = false;
+    var wrapper = pa.querySelector('.plyr__video-wrapper') || pa;
+    
+    wrapper.addEventListener('touchstart', function(e) {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
+      swipeHandled = false;
+    }, {passive: true});
+    
+    wrapper.addEventListener('touchmove', function(e) {
+      if (swipeHandled || e.touches.length !== 1) return;
+      var dx = e.touches[0].clientX - touchStartX;
+      var dy = Math.abs(e.touches[0].clientY - touchStartY);
+      // 水平滑动超过 60px 且大于垂直滑动
+      if (Math.abs(dx) > 60 && Math.abs(dx) > dy * 1.5) {
+        swipeHandled = true;
+        var delta = dx > 0 ? 10 : -10;
+        if (video.duration) {
+          video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
+        } else {
+          video.currentTime = Math.max(0, video.currentTime + delta);
+        }
+        showToast(delta > 0 ? '快进 10 秒' : '快退 10 秒');
+      }
+    }, {passive: true});
+  })();
 }
 
 function playCurrent() {
@@ -2513,6 +2561,14 @@ document.addEventListener('DOMContentLoaded', () => {
       mainContent.scrollTop += e.deltaY;
       e.preventDefault();
     }, { passive: false });
+  }
+});
+
+// v3.22: popstate 处理 — 浏览器/系统返回键拦截，避免直接退出 App
+// applyFullscreenCSS 会 pushState({_ysFullscreen:true})，返回时 pop 到此状态即退出全屏
+window.addEventListener('popstate', function(e) {
+  if (isCSSFullscreen) {
+    exitFullscreenMode();
   }
 });
 

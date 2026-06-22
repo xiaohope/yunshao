@@ -806,15 +806,9 @@ public class MainActivity extends Activity {
         
         showSystemBars();
         
-        // 通知JS退出全屏状态，并重新触发布局检测（恢复横屏模式）
+        // v3.22: 统一使用 removeFullscreenCSS() 做全量清理（移动DOM+重置样式+恢复布局）
         webView.evaluateJavascript(
-            "if(typeof isCSSFullscreen!=='undefined'){isCSSFullscreen=false;}" +
-            "var pa=document.getElementById('playerArea');if(pa){pa.classList.remove('player-fullscreen');}" +
-            "var dp=document.getElementById('detailPage');if(dp){dp.style.overflow='';dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(function(e){e.style.display='';});}" +
-            "document.querySelectorAll('.bottom-nav').forEach(function(e){e.style.display='';});" +
-            "var v=document.querySelector('#playerArea video');if(v){v.classList.remove('fullscreen-video');v.style.objectFit='';v.style.aspectRatio='';v.style.width='';v.style.height='';}" +
-            "if(typeof isPlaying!=='undefined'&&isPlaying){var mb=document.getElementById('miniPlayerBar');if(mb){mb.style.display='';}}" +
-            "if(typeof applyLayout==='function')applyLayout(localStorage.getItem('ys_layout')||'auto');",
+            "if(typeof removeFullscreenCSS==='function')removeFullscreenCSS();",
             null
         );
         
