@@ -1,4 +1,4 @@
-/* ==================== 云梢 v3.22 ==================== */
+/* ==================== 云梢 v3.22.1 ==================== */
 /* 影视流媒体APP设计规范 - Dark Mode (OLED) + Motion-Driven */
 
 /* 加载旋转图标动画 */
@@ -707,6 +707,13 @@ video::-webkit-media-controls-fullscreen-button {
   -webkit-tap-highlight-color: transparent;
 }
 .fs-exit-btn:active { background: rgba(255,255,255,0.3); }
+/* fs-exit-btn 跟随控制栏一起隐藏 */
+.fs-exit-btn.controls-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
 .player-fullscreen .player-info-overlay {
   display: none !important;
 }

@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.22 (全屏返回修复 + 滑动手势 + 按钮醒目) ====================
+// ==================== 云梢 v3.22.1 (返回闪退修复 + 返回按钮隐藏 + 滑动手势修复) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -253,9 +253,9 @@ function applyFullscreenCSS() {
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
-  // v3.22: 回退全屏时推入的 history state，避免返回键需要多按一次
+  // v3.22: 消除全屏时 push 的 history state，用 replaceState 而非 back() 避免触发 WebView onBackPressed
   if (history.state && history.state._ysFullscreen) {
-    history.back();
+    history.replaceState(null, '', location.href);
   }
   document.body.classList.remove('fs-mode');
   const isTvPage = currentPage === 'tvPage';
@@ -1330,6 +1330,8 @@ function _initPlyrPlayer(pa, video) {
     if (pa._hideControlsTimer) { clearTimeout(pa._hideControlsTimer); pa._hideControlsTimer = null; }
     var ctrls = pa.querySelector('.plyr__controls');
     if (ctrls) { ctrls.classList.remove('controls-hidden'); }
+    var exitBtn = pa.querySelector('.fs-exit-btn');
+    if (exitBtn) { exitBtn.classList.remove('controls-hidden'); }
     pa._controlsVisible = true;
   }
 
@@ -1340,6 +1342,8 @@ function _initPlyrPlayer(pa, video) {
       var ctrls = pa.querySelector('.plyr__controls');
       if (ctrls && !video.paused) { // 只在播放中隐藏
         ctrls.classList.add('controls-hidden');
+        var exitBtn = pa.querySelector('.fs-exit-btn');
+        if (exitBtn) { exitBtn.classList.add('controls-hidden'); }
         pa._controlsVisible = false;
       }
     }, delay);
@@ -1446,33 +1450,48 @@ function _addPlyrCustomButtons(pa, player, video) {
   controls.appendChild(fsBtn);
 
   // ===== v3.22: 滑动手势快进快退 =====
-  // 在视频区域检测水平滑动：左滑快退10s，右滑快进10s
+  // 挂载到 playerArea，确保捕获播放器区域的所有触摸事件
+  // 左滑快退10s，右滑快进10s
   (function setupSwipeSeek() {
-    var touchStartX = 0, touchStartY = 0, touchStartTime = 0;
-    var swipeHandled = false;
-    var wrapper = pa.querySelector('.plyr__video-wrapper') || pa;
-    
-    wrapper.addEventListener('touchstart', function(e) {
+    var touchStartX = 0, touchStartY = 0;
+    var swipeSeeking = false;
+    // 使用 pa 本身（playerArea），覆盖整个播放器区域
+    pa.addEventListener('touchstart', function(e) {
       if (e.touches.length !== 1) return;
+      // 检查是否在控制栏上（不在控制栏上才处理滑动）
+      var onControls = e.target.closest('.plyr__controls');
+      if (onControls) return;
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
-      swipeHandled = false;
+      swipeSeeking = false;
     }, {passive: true});
     
-    wrapper.addEventListener('touchmove', function(e) {
-      if (swipeHandled || e.touches.length !== 1) return;
+    pa.addEventListener('touchmove', function(e) {
+      if (swipeSeeking || e.touches.length !== 1) return;
       var dx = e.touches[0].clientX - touchStartX;
       var dy = Math.abs(e.touches[0].clientY - touchStartY);
-      // 水平滑动超过 60px 且大于垂直滑动
+      // 水平滑动超过 60px 且大于垂直滑动的 1.5 倍
       if (Math.abs(dx) > 60 && Math.abs(dx) > dy * 1.5) {
-        swipeHandled = true;
+        swipeSeeking = true;
         var delta = dx > 0 ? 10 : -10;
         if (video.duration) {
           video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
         } else {
           video.currentTime = Math.max(0, video.currentTime + delta);
         }
+        // 触发显示控制栏（重置3秒计时器）
+        var ctrls2 = pa.querySelector('.plyr__controls');
+        if (ctrls2) ctrls2.classList.remove('controls-hidden');
+        var exitBtn2 = pa.querySelector('.fs-exit-btn');
+        if (exitBtn2) exitBtn2.classList.remove('controls-hidden');
+        // 重置3秒计时
+        if (pa._hideControlsTimer) { clearTimeout(pa._hideControlsTimer); }
+        pa._hideControlsTimer = setTimeout(function() {
+          if (!video.paused) {
+            if (ctrls2) ctrls2.classList.add('controls-hidden');
+            if (exitBtn2) exitBtn2.classList.add('controls-hidden');
+          }
+        }, 3000);
         showToast(delta > 0 ? '快进 10 秒' : '快退 10 秒');
       }
     }, {passive: true});
