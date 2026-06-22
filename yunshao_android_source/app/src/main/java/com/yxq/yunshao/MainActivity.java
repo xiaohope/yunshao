@@ -769,13 +769,17 @@ public class MainActivity extends Activity {
         handler.removeCallbacksAndMessages(null);
         
         // 1. 先 JS 清理 DOM（move pa back, remove fs-exit-btn, 恢复页面布局）
-        //    必须在屏幕旋转之前执行，否则异步 JS 跑在已旋转的画面上 → 半全屏半正常态 → 黑屏
+        //    必须等 JS 跑完再转屏，否则半全屏半正常态 → 渲染错乱 → 黑屏
         webView.evaluateJavascript(
             "if(typeof removeFullscreenCSS==='function')removeFullscreenCSS();",
-            null
+            result -> {
+                // JS 清理完成 → 安全恢复方向（回调在 UI 线程执行）
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
+            }
         );
         
-        // 2. 清理 UI 层（fullscreenContainer、flags 等）
+        // 2. 立即清理 UI 层（fullscreenContainer、flags 等）——立即恢复系统栏
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
@@ -789,7 +793,6 @@ public class MainActivity extends Activity {
         playPauseBtn = null;
         speedBtn = null;
         
-        // 处理 fullscreenContainer 位置
         FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
         if (fullscreenContainer.getParent() == decorView) {
             decorView.removeView(fullscreenContainer);
@@ -809,12 +812,8 @@ public class MainActivity extends Activity {
         }
         customView = null;
         
-        // 3. 延迟恢复方向，让 JS 先跑完 DOM 清理
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-            showSystemBars();
-            if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
-        }, 150);
+        // 3. 立即恢复系统栏（用户能立即看到导航栏/状态栏）
+        showSystemBars();
     }
 
     /**
