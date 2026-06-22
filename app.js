@@ -418,6 +418,19 @@ function applyFullscreenCSS() {
   // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
 
+  // 绑定点击事件（桌面端）：点击视频区域切换控制层显示/隐藏
+  pa._fsClickHandler = (e) => {
+    if (e.target.closest('.fs-top-bar') || e.target.closest('.fs-progress-bar') || e.target.closest('.fs-dropdown') || e.target.closest('.fs-settings-panel')) return;
+    const controls = pa.querySelector('.fullscreen-controls');
+    if (!controls) return;
+    if (controls.classList.contains('visible')) {
+      hideFullscreenControls(pa);
+    } else {
+      showFullscreenControls(pa);
+    }
+  };
+  pa.addEventListener('click', pa._fsClickHandler);
+
   // 全屏进度条定时更新
   clearInterval(pa._fsProgressTimer);
   pa._fsProgressTimer = setInterval(() => {
@@ -486,6 +499,9 @@ function removeFullscreenCSS() {
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
+    // 移除全屏点击/触摸处理器
+    if (pa._fsClickHandler) { pa.removeEventListener('click', pa._fsClickHandler); pa._fsClickHandler = null; }
+    if (pa._fsTouchHandler) { pa.removeEventListener('touchend', pa._fsTouchHandler); pa._fsTouchHandler = null; }
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
