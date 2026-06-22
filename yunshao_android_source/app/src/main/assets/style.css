@@ -694,18 +694,6 @@ body.fs-mode .video-fs-btn {
   background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
   pointer-events: auto;
 }
-.fs-seek-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-.fs-right-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
 .fs-back-btn {
   width: 36px; height: 36px;
   border: none;
@@ -728,6 +716,78 @@ body.fs-mode .video-fs-btn {
   text-overflow: ellipsis;
   line-height: 36px;
   pointer-events: auto;
+}
+
+/* 底部控制栏 */
+
+/* 全屏进度条 */
+.fs-progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #fff;
+  margin-top: auto;
+  pointer-events: auto;
+
+  margin-top: auto;
+  padding: 8px 12px 0;}
+.fs-time-current, .fs-time-total {
+  min-width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.fs-progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+.fs-progress-track:hover {
+  height: 6px;
+}
+.fs-progress-played {
+  height: 100%;
+  background: #ff6b35;
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.3s;
+}
+.fs-progress-handle {
+  display: none;
+}
+.fs-progress-track:hover .fs-progress-handle {
+  display: block;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: #ff6b35;
+  border-radius: 50%;
+  left: 0%;
+}
+
+.fs-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%);
+  pointer-events: auto;
+}
+.fs-bottom-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fs-bottom-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* 控制按钮（通用） */

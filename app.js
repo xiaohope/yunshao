@@ -1,5 +1,7 @@
 // ==================== 云梢 v3.9.0 ====================
-const API = 'http://localhost:8989';
+const API = typeof window !== 'undefined' && window.location && window.location.protocol && window.location.protocol.startsWith('http') 
+  ? window.location.protocol + '//' + window.location.host  // 浏览器环境：指向当前 dev server
+  : 'http://localhost:8989';  // Android 环境：指向本地 NanoHTTPD
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
 let currentPage = 'homePage', pageStack = ['homePage'];
@@ -211,7 +213,7 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -240,14 +242,8 @@ function enterFullscreenMode() {
     }, 500);
   }
 
-  // 方案A：CSS全屏布局 + 触发X5原生全屏（进度条3秒后自动隐藏）
+  // CSS全屏方案：统一走applyFullscreenCSS，不再触发原生全屏
   applyFullscreenCSS();
-
-  // 触发原生全屏：onShowCustomView叠加原生控制层
-  const isPortraitVideo = v.videoHeight > v.videoWidth;
-  if (window.YunShaoNative && window.YunShaoNative.enterFullscreen) {
-    try { YunShaoNative.enterFullscreen(isPortraitVideo); } catch (e) {}
-  }
 
   // 通知原生隐藏系统栏（状态栏+导航栏），实现真正的全屏沉浸感
   if (window.YunShaoNative && window.YunShaoNative.hideSystemUI) {
@@ -265,11 +261,6 @@ function fmt(seconds) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 function exitFullscreenMode() {
-  // 触发原生全屏退出（onHideCustomView → exitFullscreenInternal）
-  if (window.YunShaoNative && window.YunShaoNative.exitFullscreen) {
-    try { YunShaoNative.exitFullscreen(); } catch (e) {}
-  }
-
   removeFullscreenCSS();
 
   // 恢复自动旋转
@@ -304,7 +295,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.style.pointerEvents = 'auto'; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.setAttribute("x5-video-player-type", "h5-page"); video.setAttribute("x5-video-player-fullscreen", "false"); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -323,21 +314,45 @@ function applyFullscreenCSS() {
   const speedLabel = _fsSpeedOptions.map((s,i)=>s===_fsPlaySpeed?_fsSpeedLabels[i]:null).filter(Boolean)[0]||'1.0x';
   const ratioLabel = _fsRatioLabels[_fsVideoRatio]||'默认';
 
+  // 底部遮罩：挡住原生播放器进度条（约60px高）
+  const fsBottomMask = document.createElement("div");
+  fsBottomMask.className = "_fsBottomMask";
+  fsBottomMask.style.cssText = "position:absolute;bottom:0;left:0;right:0;height:65px;background:rgba(0,0,0,0.95);z-index:9999;pointer-events:none;";
+  // 先添加到pa，之后会移到controls内部
+
   // 创建新的全屏控制层
   const controls = document.createElement('div');
   controls.className = 'fullscreen-controls';
-  controls.innerHTML = `    <!-- 顶部控制栏：返回 + 快退/播放/快进 + 倍速/比例/设置 -->
+  controls.innerHTML = `
+    <!-- 顶部：返回 + 视频标题 -->
     <div class="fs-top-bar">
       <button class="fs-back-btn" onclick="exitFullscreenMode()" title="退出全屏">
         <svg viewBox="0 0 24 24" width="22" height="22"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
       </button>
-      <div class="fs-seek-group">
+      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
+    
+    </div>
+
+    <!-- 底部：进度条 + 控制栏 -->
+    <div class="fs-progress-bar">
+      <span class="fs-time-current" id="fsTimeCurrent">0:00</span>
+      <div class="fs-progress-track" id="fsProgressTrack">
+        <div class="fs-progress-played" id="fsProgressPlayed"></div>
+        <div class="fs-progress-handle" id="fsProgressHandle"></div>
+      </div>
+      <span class="fs-time-total" id="fsTimeTotal">0:00</span>
+    </div>
+
+    <!-- 底部控制栏 -->
+    <div class="fs-bottom-bar">
+      <!-- 左侧：快退 / 播放暂停 / 快进 -->
+      <div class="fs-bottom-left">
         <button class="fs-ctrl-btn fs-seek-btn" id="fsRewindBtn" title="快退${_fsSeekSec}s">«${_fsSeekSec}s</button>
         <button class="fs-ctrl-btn fs-play-btn" id="fsPlayBtn" title="播放/暂停">▶</button>
         <button class="fs-ctrl-btn fs-seek-btn" id="fsForwardBtn" title="快进${_fsSeekSec}s">${_fsSeekSec}s»</button>
       </div>
-      <div class="fs-title" title="${videoName.replace(/"/g,'&quot;')}">${videoName}</div>
-      <div class="fs-right-group">
+      <!-- 右侧：倍速 / 比例 / 设置 -->
+      <div class="fs-bottom-right">
         <button class="fs-ctrl-btn fs-speed-btn" id="fsSpeedBtn" title="播放倍速">${speedLabel}</button>
         <button class="fs-ctrl-btn fs-ratio-btn" id="fsRatioBtn" title="视频比例">${ratioLabel}</button>
         <button class="fs-ctrl-btn fs-settings-btn" id="fsSettingsBtn" title="设置">⚙</button>
@@ -380,17 +395,6 @@ function applyFullscreenCSS() {
         </div>
       </div>
     </div>
-    <!-- 底部：进度条 -->
-    <div class="fs-progress-bar">
-      <span class="fs-time-current" id="fsTimeCurrent">0:00</span>
-      <div class="fs-progress-track" id="fsProgressTrack">
-        <div class="fs-progress-played" id="fsProgressPlayed"></div>
-        <div class="fs-progress-handle" id="fsProgressHandle"></div>
-      </div>
-      <span class="fs-time-total" id="fsTimeTotal">0:00</span>
-    </div>
-
-
   `;
   pa.appendChild(controls);
   controls.style.zIndex = "2147483647";
@@ -417,19 +421,6 @@ function applyFullscreenCSS() {
 
   // 点击视频区域显示/隐藏控制层
   showFullscreenControls(pa);
-
-  // 绑定点击事件（桌面端）：点击视频区域切换控制层显示/隐藏
-  pa._fsClickHandler = (e) => {
-    if (e.target.closest('.fs-top-bar') || e.target.closest('.fs-progress-bar') || e.target.closest('.fs-dropdown') || e.target.closest('.fs-settings-panel')) return;
-    const controls = pa.querySelector('.fullscreen-controls');
-    if (!controls) return;
-    if (controls.classList.contains('visible')) {
-      hideFullscreenControls(pa);
-    } else {
-      showFullscreenControls(pa);
-    }
-  };
-  pa.addEventListener('click', pa._fsClickHandler);
 
   // 全屏进度条定时更新
   clearInterval(pa._fsProgressTimer);
@@ -499,13 +490,12 @@ function removeFullscreenCSS() {
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
-    // 移除全屏点击/触摸处理器
-    if (pa._fsClickHandler) { pa.removeEventListener('click', pa._fsClickHandler); pa._fsClickHandler = null; }
-    if (pa._fsTouchHandler) { pa.removeEventListener('touchend', pa._fsTouchHandler); pa._fsTouchHandler = null; }
+    const bottomMask = pa.querySelector("._fsBottomMask");
+    if(bottomMask) bottomMask.remove();
 
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
-    if(v) { v.classList.remove('fullscreen-video'); v.style.pointerEvents = 'none'; }
+    if(v) v.classList.remove('fullscreen-video');
     // 移除全屏控制覆盖层
     const fc=pa.querySelector('.fullscreen-controls');
     if(fc) fc.remove();
@@ -919,7 +909,7 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); v.setAttribute('x5-video-player-type', 'h5-page'); v.setAttribute('x5-video-player-fullscreen', 'false'); }
+  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
@@ -1909,6 +1899,8 @@ function cleanupPlayer(){
   const pa=document.getElementById('playerArea');
   if(pa){
     clearInterval(pa._fsProgressTimer); pa._fsProgressTimer = null;
+    const bottomMask = pa.querySelector("._fsBottomMask");
+    if(bottomMask) bottomMask.remove();
     if(pa._progressTimer)clearInterval(pa._progressTimer);
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
   }
@@ -1931,11 +1923,10 @@ function playCurrent() {
   const startOverlay = document.getElementById('playerStartOverlay');
   if(startOverlay) startOverlay.style.display = 'none';
   
-  // 用 innerHTML 创建 video，确保 x5 属性在 HTML 解析时存在
-  // 'h5-page' 模式：X5 不干预，走标准 HTML5 控制栏，controls=false 可隐藏
-  pa.innerHTML='<video id="mainVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none;" autoplay></video>';
-  const video=pa.querySelector('#mainVideo');
-  video.controls=false;video.autoplay=true;
+  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在
+  pa.innerHTML = '<video id="mainVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none;" autoplay></video>';
+  const video = pa.querySelector('#mainVideo');
+  video.controls = false;
   
   // 播放信息覆盖层
   const infoOverlay=document.createElement('div');
@@ -3894,11 +3885,10 @@ function playLiveChannel(name, url) {
   const placeholder = document.getElementById('tvPlayerPlaceholder');
   if (placeholder) placeholder.style.display = 'none';
   
-  // 创建video元素（用innerHTML确保x5属性在解析时存在）
+  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在
   pa.innerHTML = '<video id="tvVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1;" autoplay></video>';
   const video = pa.querySelector('#tvVideo');
   video.controls = false;
-  if (url && url.indexOf('m3u8') >= 0) video.setAttribute('type', 'application/x-mpegURL');
   
   // 播放信息overlay（LIVE标记+频道名，和详情页player-info-overlay一样）
   const safeName = name.replace(/"/g, '').replace(/tvg-\w+\s*=\s*/gi, '').replace(/https?:\/\/\S+/gi, '').trim();
