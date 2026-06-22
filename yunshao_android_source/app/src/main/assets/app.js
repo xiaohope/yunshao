@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.22.1 (返回闪退修复 + 返回按钮隐藏 + 滑动手势修复) ====================
+// ==================== 云梢 v3.22.2 (返回闪退根因修复 + 全局滑动手势快进快退) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -209,8 +209,13 @@ function exitFullscreenMode() {
 // 3. Java层会把--status-bar-h设为0并隐藏系统栏
 function applyFullscreenCSS() {
   isCSSFullscreen=true;
-  // v3.22: 推入 history 状态，拦截浏览器/系统返回键
-  history.pushState({_ysFullscreen: true}, '', location.href);
+  // v3.22.1: 仅在纯 Web 端推入 history state 拦截返回键。
+  // Android 端由 MainActivity.onBackPressed 同步处理，pushState 会导致
+  // WebView 先 pop → popstate 触发 exitFullscreen → isFullscreen=false →
+  // onBackPressed 走到 exit 逻辑退出 App（双重触发）。
+  if (!window.YunShaoNative) {
+    history.pushState({_ysFullscreen: true}, '', location.href);
+  }
   document.body.classList.add('fs-mode');
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
@@ -253,8 +258,8 @@ function applyFullscreenCSS() {
 }
 function removeFullscreenCSS() {
   isCSSFullscreen=false;
-  // v3.22: 消除全屏时 push 的 history state，用 replaceState 而非 back() 避免触发 WebView onBackPressed
-  if (history.state && history.state._ysFullscreen) {
+  // v3.22.1: 仅在纯 Web 端清理 history state
+  if (!window.YunShaoNative && history.state && history.state._ysFullscreen) {
     history.replaceState(null, '', location.href);
   }
   document.body.classList.remove('fs-mode');
@@ -1448,54 +1453,6 @@ function _addPlyrCustomButtons(pa, player, video) {
   }
   // 全屏按钮放到控制栏末尾
   controls.appendChild(fsBtn);
-
-  // ===== v3.22: 滑动手势快进快退 =====
-  // 挂载到 playerArea，确保捕获播放器区域的所有触摸事件
-  // 左滑快退10s，右滑快进10s
-  (function setupSwipeSeek() {
-    var touchStartX = 0, touchStartY = 0;
-    var swipeSeeking = false;
-    // 使用 pa 本身（playerArea），覆盖整个播放器区域
-    pa.addEventListener('touchstart', function(e) {
-      if (e.touches.length !== 1) return;
-      // 检查是否在控制栏上（不在控制栏上才处理滑动）
-      var onControls = e.target.closest('.plyr__controls');
-      if (onControls) return;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      swipeSeeking = false;
-    }, {passive: true});
-    
-    pa.addEventListener('touchmove', function(e) {
-      if (swipeSeeking || e.touches.length !== 1) return;
-      var dx = e.touches[0].clientX - touchStartX;
-      var dy = Math.abs(e.touches[0].clientY - touchStartY);
-      // 水平滑动超过 60px 且大于垂直滑动的 1.5 倍
-      if (Math.abs(dx) > 60 && Math.abs(dx) > dy * 1.5) {
-        swipeSeeking = true;
-        var delta = dx > 0 ? 10 : -10;
-        if (video.duration) {
-          video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
-        } else {
-          video.currentTime = Math.max(0, video.currentTime + delta);
-        }
-        // 触发显示控制栏（重置3秒计时器）
-        var ctrls2 = pa.querySelector('.plyr__controls');
-        if (ctrls2) ctrls2.classList.remove('controls-hidden');
-        var exitBtn2 = pa.querySelector('.fs-exit-btn');
-        if (exitBtn2) exitBtn2.classList.remove('controls-hidden');
-        // 重置3秒计时
-        if (pa._hideControlsTimer) { clearTimeout(pa._hideControlsTimer); }
-        pa._hideControlsTimer = setTimeout(function() {
-          if (!video.paused) {
-            if (ctrls2) ctrls2.classList.add('controls-hidden');
-            if (exitBtn2) exitBtn2.classList.add('controls-hidden');
-          }
-        }, 3000);
-        showToast(delta > 0 ? '快进 10 秒' : '快退 10 秒');
-      }
-    }, {passive: true});
-  })();
 }
 
 function playCurrent() {
@@ -2596,6 +2553,74 @@ let sx=0,sy=0,swiping=false;
 const MAIN_PAGES=['homePage','catPage','tvPage','profilePage']; // 底部导航主页，侧滑不应返回
 document.addEventListener('touchstart',e=>{if(document.fullscreenElement||(typeof isCSSFullscreen!=='undefined'&&isCSSFullscreen))return;if(e.touches[0].clientX<15){sx=e.touches[0].clientX;sy=e.touches[0].clientY;swiping=true;}},{passive:true});
 document.addEventListener('touchend',e=>{if(!swiping)return;swiping=false;if(typeof isCSSFullscreen!=='undefined'&&isCSSFullscreen)return;const dx=e.changedTouches[0].clientX-sx,dy=Math.abs(e.changedTouches[0].clientY-sy);if(dx>80&&dy<60&&!MAIN_PAGES.includes(currentPage))goBack();},{passive:true});
+
+// ===== v3.22.1: 全局滑动快进快退手势（document 级，覆盖 X5 同层播放器） =====
+(function initSwipeSeek() {
+  var _ssTouchX = 0, _ssTouchY = 0;
+  var _ssActive = false;
+  var _ssVideo = null;
+  var _ssPa = null;
+
+  document.addEventListener('touchstart', function(e) {
+    // 只在播放页面且正在播放时启用
+    if (currentPage !== 'detailPage' && currentPage !== 'tvPage') { _ssActive = false; return; }
+    if (!isPlaying) { _ssActive = false; return; }
+    if (e.touches.length !== 1) { _ssActive = false; return; }
+    // 不处理控制栏上的触摸
+    if (e.target.closest('.plyr__controls')) { _ssActive = false; return; }
+    // 不处理返回按钮
+    if (e.target.closest('.fs-exit-btn')) { _ssActive = false; return; }
+
+    var pa = document.getElementById('playerArea');
+    if (!pa || pa.style.display === 'none') { _ssActive = false; return; }
+    // 必须在播放器区域内
+    if (!pa.contains(e.target)) { _ssActive = false; return; }
+
+    var v = pa.querySelector('video');
+    if (!v || v.paused) { _ssActive = false; return; }
+
+    _ssTouchX = e.touches[0].clientX;
+    _ssTouchY = e.touches[0].clientY;
+    _ssActive = true;
+    _ssVideo = v;
+    _ssPa = pa;
+  }, {passive: true});
+
+  document.addEventListener('touchmove', function(e) {
+    if (!_ssActive || e.touches.length !== 1) return;
+    var dx = e.touches[0].clientX - _ssTouchX;
+    var dy = Math.abs(e.touches[0].clientY - _ssTouchY);
+    // 水平滑动超过 60px 且大于垂直滑动的 1.5 倍
+    if (Math.abs(dx) > 60 && Math.abs(dx) > dy * 1.5) {
+      _ssActive = false;
+      var delta = dx > 0 ? 10 : -10;
+      if (_ssVideo) {
+        _ssVideo.currentTime = Math.max(0, Math.min(_ssVideo.duration || 99999, _ssVideo.currentTime + delta));
+      }
+      // 显示控制栏
+      if (_ssPa) {
+        var cs = _ssPa.querySelector('.plyr__controls');
+        if (cs) cs.classList.remove('controls-hidden');
+        var eb = _ssPa.querySelector('.fs-exit-btn');
+        if (eb) eb.classList.remove('controls-hidden');
+        if (_ssPa._hideControlsTimer) { clearTimeout(_ssPa._hideControlsTimer); }
+        _ssPa._hideControlsTimer = setTimeout(function() {
+          if (_ssVideo && !_ssVideo.paused) {
+            if (cs) cs.classList.add('controls-hidden');
+            if (eb) eb.classList.add('controls-hidden');
+          }
+        }, 3000);
+      }
+      showToast(delta > 0 ? '快进 10 秒' : '快退 10 秒');
+    }
+  }, {passive: true});
+
+  document.addEventListener('touchend', function() {
+    _ssActive = false;
+    _ssVideo = null;
+    _ssPa = null;
+  }, {passive: true});
+})();
 
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded',()=>{
