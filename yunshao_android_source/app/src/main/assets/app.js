@@ -211,7 +211,6 @@ function switchTab(pid) { pageStack=[pid]; showPage(pid); }
 function enterFullscreenMode() {
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
   if (!v) return;
 
   // 根据视频宽高比自动设置屏幕方向
@@ -293,7 +292,7 @@ function applyFullscreenCSS() {
   document.body.appendChild(pa);
   pa.classList.add('player-fullscreen');
   const video = pa.querySelector('video');
-  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.setAttribute("controlslist", "nodownload noremoteplayback"); video.setAttribute("disablePictureInPicture", ""); video.addEventListener("touchstart", function(ev){ ev.preventDefault(); }, {passive:false}); video.addEventListener("click", function(ev){ ev.preventDefault(); }, {capture:true}); }
+  if(video) { video.classList.add("fullscreen-video"); video.controls = false; video.setAttribute("controlslist", "nodownload"); video.setAttribute("disablePictureInPicture", ""); }
 
   // 显示视频信息覆盖层
   const overlay = pa.querySelector('.player-info-overlay');
@@ -907,7 +906,6 @@ function setVideoRatio(ratio) {
   currentVideoRatio = ratio;
   const pa = currentPage === 'tvPage' ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   const v = pa ? pa.querySelector('video') : null;
-  if(v) { v.controls = false; v.setAttribute('controlslist', 'nodownload noremoteplayback'); v.removeAttribute('controls'); }
   if (!v) return;
 
   // 更新旧版按钮状态（兼容原生全屏）
@@ -1921,10 +1919,10 @@ function playCurrent() {
   const startOverlay = document.getElementById('playerStartOverlay');
   if(startOverlay) startOverlay.style.display = 'none';
   
-  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在
-  pa.innerHTML = '<video id="mainVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none;" autoplay></video>';
-  const video = pa.querySelector('#mainVideo');
-  video.controls = false;
+  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在（X5 必需）
+  pa.innerHTML='<video id="mainVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" style="width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none;" autoplay></video>';
+  const video=pa.querySelector('#mainVideo');
+  video.controls=false;
   
   // 播放信息覆盖层
   const infoOverlay=document.createElement('div');
@@ -3883,8 +3881,8 @@ function playLiveChannel(name, url) {
   const placeholder = document.getElementById('tvPlayerPlaceholder');
   if (placeholder) placeholder.style.display = 'none';
   
-  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在
-  pa.innerHTML = '<video id="tvVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" style="width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1;" autoplay></video>';
+  // innerHTML 创建 video，确保 x5-video-player-type 在 HTML 解析时存在（X5 必需）
+  pa.innerHTML='<video id="tvVideo" controlslist="nodownload noremoteplayback" disablepictureinpicture playsinline webkit-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" style="width:100%;height:100%;background:#000;object-fit:contain;position:relative;z-index:1;" autoplay></video>';
   const video = pa.querySelector('#tvVideo');
   video.controls = false;
   
