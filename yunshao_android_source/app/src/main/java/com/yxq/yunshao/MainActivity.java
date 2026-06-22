@@ -788,11 +788,18 @@ public class MainActivity extends Activity {
         
         // 将全屏容器从DecorView移回rootView
         FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
-        decorView.removeView(fullscreenContainer);
-        rootView.addView(fullscreenContainer, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ));
+        // v3.22.3: CSS全屏模式下 fullscreenContainer 仍在 rootView 中，不在 decorView 中。
+        // 只有 onShowCustomView（原生全屏）时它才在 decorView 中。
+        if (fullscreenContainer.getParent() == decorView) {
+            decorView.removeView(fullscreenContainer);
+            rootView.addView(fullscreenContainer, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ));
+        } else {
+            // CSS全屏：容器已在 rootView 中，只需确保可见
+            fullscreenContainer.setVisibility(View.VISIBLE);
+        }
         
         // 恢复WebView
         webView.setVisibility(View.VISIBLE);
