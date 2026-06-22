@@ -800,9 +800,9 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             ));
-        } else {
-            fullscreenContainer.setVisibility(View.VISIBLE);
         }
+        // fullscreenContainer 始终隐藏（CSS全屏方案不使用原生控制层）
+        fullscreenContainer.setVisibility(View.GONE);
         
         webView.setVisibility(View.VISIBLE);
         
