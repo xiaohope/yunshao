@@ -515,7 +515,7 @@ function renderHomeData(data) {
     var isWide=window.innerWidth>=768;
     if(isWide){
       bannerEl.style.display='none';
-      hotGridEl.innerHTML=data.hot.slice(0,5).map(v=>createCard(v)).join('');
+      hotGridEl.innerHTML=data.hot.slice(0,6).map(v=>createCard(v)).join('');
     } else {
       bannerEl.style.display='';
       hotGridEl.innerHTML=data.hot.slice(1,5).map(v=>createCard(v)).join('');
