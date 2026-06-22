@@ -111,6 +111,9 @@ body {
 .page.slide-out { transform: translateX(-30px); opacity: 0; }
 .page-with-nav { bottom:var(--nav-height); }
 
+/* 移动端强制隐藏侧边栏（防止页面切换时闪现） */
+.side-nav { display: none !important; }
+
 /* ========== Top Bar ========== */
 .top-bar { 
   height:var(--top-bar-height); 
