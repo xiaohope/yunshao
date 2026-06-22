@@ -606,10 +606,8 @@ video::-webkit-media-controls-fullscreen-button {
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
   overflow: hidden !important;
+  display: block !important;
 }
 .player-fullscreen video,
 .fullscreen-video {
@@ -617,132 +615,46 @@ video::-webkit-media-controls-fullscreen-button {
   height: 100% !important;
   object-fit: contain !important;
   background: #000 !important;
-  /* 去掉position:absolute，让flex居中生效 */
-  position: static !important;
-  top: auto !important;
-  left: auto !important;
-  margin: 0 !important;
-  padding: 0 !important;
 }
-.player-fullscreen .player-info-overlay {
-  z-index: 1000000 !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  background: transparent !important;
-  opacity: 0 !important;
-  display: none !important;
+/* Plyr 容器全屏适配 */
+.player-fullscreen .plyr {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
 }
-
-/* ==================== 滑动快进提示 ==================== */
-.swipe-hint {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-  font-size: 24px;
-  font-weight: 600;
-  padding: 16px 32px;
-  border-radius: 12px;
-  z-index: 9999999;
-  pointer-events: none;
-  text-align: center;
-  backdrop-filter: blur(10px);
+.player-fullscreen .plyr__video-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  background: #000 !important;
 }
-.swipe-hint.fade-out {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-/* 全屏时强制隐藏底部导航和直播源选择器 */
-body.fs-mode .bottom-nav,
-body.fs-mode .tv-source-bar,
-body.fs-mode .video-fs-btn {
-  display: none !important;
-}
-
-/* 全屏控制覆盖层 - 去掉背景遮罩，仅保留按钮本身 */
-.fullscreen-controls {
+/* 全屏退出按钮 */
+.fs-exit-btn {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  z-index: 2147483647 !important;
-  background: transparent !important;
-  pointer-events: none;
-}
-.fs-back-btn {
+  top: 16px;
+  left: 16px;
+  z-index: 10000000;
+  background: rgba(0,0,0,0.5);
+  border: none;
+  border-radius: 50%;
   width: 40px;
   height: 40px;
-  border: none;
-  background: rgba(255,255,255,0.15);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s;
-  -webkit-tap-highlight-color: transparent;
-  pointer-events: auto;
-}
-.fs-back-btn:active { background: rgba(255,255,255,0.3); }
-.fs-seek-group {
-  display: flex;
-  gap: 4px;
-  background: rgba(0,0,0,0.5);
-  border-radius: 20px;
-  padding: 3px;
-  pointer-events: auto;
-}
-.fs-ctrl-btn {
-  font-size: 11px;
-  color: rgba(255,255,255,0.85);
-  background: transparent;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
-}
-.fs-ctrl-btn:active { background: rgba(255,255,255,0.3); }
-.fs-ctrl-btn.active { background: rgba(255,255,255,0.25); color: #fff; font-weight: 600; }
-.fs-ratio-group {
-  display: flex;
-  gap: 4px;
-  background: rgba(0,0,0,0.5);
-  border-radius: 20px;
-  padding: 3px;
-  pointer-events: auto;
-}
-.fs-ratio-btn {
-  font-size: 11px;
-  color: rgba(255,255,255,0.7);
-  background: transparent;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
-.fs-ratio-btn.active {
-  background: rgba(255,255,255,0.2);
-  color: #fff;
-  font-weight: 600;
+.fs-exit-btn:active { background: rgba(255,255,255,0.3); }
+.player-fullscreen .player-info-overlay {
+  display: none !important;
 }
-.fs-ratio-btn:active { background: rgba(255,255,255,0.3); }
+
+/* 全屏时强制隐藏底部导航和直播源选择器 */
+body.fs-mode .bottom-nav,
+body.fs-mode .tv-source-bar {
+  display: none !important;
+}
+
 
 .detail-info { padding:14px 16px; }
 .info-title { font-size:18px; font-weight:700; margin-bottom:6px; }
@@ -3141,12 +3053,7 @@ body.theme-dark .sri-tag-type { background: rgba(156,163,175,0.12); color: #9CA3
 #searchContent {
   overscroll-behavior-y: contain;
 }
-.custom-video-bar{position:absolute;bottom:0;left:0;right:0;z-index:6;padding:0 12px 8px;background:linear-gradient(transparent,rgba(0,0,0,0.6));opacity:0;transition:opacity .3s;}
-.player-fullscreen .custom-video-bar,.playerArea:hover .custom-video-bar{opacity:1;}
-.cvb-progress{position:relative;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;cursor:pointer;margin-bottom:4px;}
-.cvb-buffered{position:absolute;top:0;left:0;height:100%;background:rgba(255,255,255,0.3);border-radius:2px;}
-.cvb-played{position:absolute;top:0;left:0;height:100%;background:#3b82f6;border-radius:2px;}
-.cvb-time{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.8);}
+/* ===== 横向布局内嵌适配 ==== */
 
 /* 采集源状态标记 */
 .source-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;margin-left:auto;}

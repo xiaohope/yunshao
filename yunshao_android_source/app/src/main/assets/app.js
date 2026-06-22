@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.19.0 ====================
+// ==================== 云梢 v3.20.0 (Plyr集成) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -211,69 +211,30 @@ function applyFullscreenCSS() {
   const isTvPage = currentPage === 'tvPage';
   const pa = isTvPage ? document.getElementById('tvPlayerArea') : document.getElementById('playerArea');
   if(pa){
-    // 把播放器移到body下，脱离detail-body的visibility:hidden影响
     pa._originalParent = pa.parentNode;
     pa._originalNextSibling = pa.nextSibling;
     document.body.appendChild(pa);
     pa.classList.add('player-fullscreen');
     const v=pa.querySelector('video');
     if(v) v.classList.add('fullscreen-video');
-    const overlay=pa.querySelector('.player-info-overlay');
-    if(overlay){overlay.classList.add('visible');clearTimeout(pa._overlayTimer);pa._overlayTimer=setTimeout(()=>overlay.classList.remove('visible'),3000);}
-    // 全屏时隐藏自定义全屏按钮
-    const fsBtn=pa.querySelector('.video-fs-btn');
-    if(fsBtn) fsBtn.style.display='none';
-    
-    // 移除旧控制层（如果有的话），确保每次全屏都重新创建
-    const oldCtrl=pa.querySelector('.fullscreen-controls');
-    if(oldCtrl) oldCtrl.remove();
-    
-    // 添加全屏控制覆盖层（每次全屏都创建，确保存在）
-    const controls=document.createElement('div');
-    controls.className='fullscreen-controls';
-    controls.innerHTML=`
-      <button class="fs-back-btn" onclick="exitFullscreenMode()">
-        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>
-      </button>
-      <div class="fs-seek-group">
-        <button class="fs-ctrl-btn" id="fsRewindBtn">«10s</button>
-        <button class="fs-ctrl-btn" id="fsSpeedBtn">1.0x</button>
-        <button class="fs-ctrl-btn" id="fsForwardBtn">10s»</button>
-      </div>
-      <div class="fs-ratio-group">
-        <button class="fs-ratio-btn ${currentVideoRatio==='contain'?'active':''}" data-ratio="contain" onclick="setVideoRatio('contain')">默认</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='16/9'?'active':''}" data-ratio="16/9" onclick="setVideoRatio('16/9')">16:9</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='4/3'?'active':''}" data-ratio="4/3" onclick="setVideoRatio('4/3')">4:3</button>
-        <button class="fs-ratio-btn ${currentVideoRatio==='cover'?'active':''}" data-ratio="cover" onclick="setVideoRatio('cover')">填充</button>
-      </div>
-    `;
-    pa.appendChild(controls);
-    
-    // 确保控制层始终在最上层
-    controls.style.zIndex='2147483647';
-    
-    // 绑定快退/快进/倍速按钮事件
-    bindFsControlButtons(pa);
-    
-    // 添加全屏滑动快进功能
-    addFullscreenSwipe(pa);
+    // 全屏退出按钮
+    var exitBtn = document.createElement('button');
+    exitBtn.className = 'fs-exit-btn';
+    exitBtn.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#fff"/></svg>';
+    exitBtn.onclick = function() { exitFullscreenMode(); };
+    pa.appendChild(exitBtn);
   }
   // 隐藏非播放器内容
   if (isTvPage) {
     const tp = document.getElementById('tvPage');
-    if (tp) {
-      tp.querySelectorAll('.tv-group-tabs,.tv-channel-area,.tv-source-bar').forEach(e=>e.style.display='none');
-    }
+    if (tp) tp.querySelectorAll('.tv-group-tabs,.tv-channel-area,.tv-source-bar').forEach(e=>e.style.display='none');
   } else {
     const dp=document.getElementById('detailPage');
-    if(dp){
-      dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(e=>e.style.display='none');
-    }
+    if(dp) dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(e=>e.style.display='none');
   }
   document.querySelectorAll('.bottom-nav').forEach(e=>e.style.display='none');
   const sideNav=document.getElementById('sideNav');
   if(sideNav) sideNav.style.display='none';
-  // 全屏时隐藏底部播放条
   const miniBar = document.getElementById('miniPlayerBar');
   if(miniBar) miniBar.style.display = 'none';
   // 恢复播放
@@ -289,258 +250,32 @@ function removeFullscreenCSS() {
     pa.classList.remove('player-fullscreen');
     const v=pa.querySelector('video');
     if(v) v.classList.remove('fullscreen-video');
-    // 移除全屏控制覆盖层
-    const fc=pa.querySelector('.fullscreen-controls');
-    if(fc) fc.remove();
-    // 移除滑动快进事件监听
-    if (pa._swipeHandler) {
-      pa.removeEventListener('touchstart', pa._swipeHandler.touchstart);
-      pa.removeEventListener('touchmove', pa._swipeHandler.touchmove);
-      pa.removeEventListener('touchend', pa._swipeHandler.touchend);
-      delete pa._swipeHandler;
-    }
-    // 清理快退/快进定时器
-    _fsSeeking = false;
-    clearInterval(_fsSeekTimer);
-    // 恢复播放速度
-    _fsSpeedIdx = 2;
-    if(v) v.playbackRate = 1.0;
-    // 恢复自定义全屏按钮
-    const fsBtn=pa.querySelector('.video-fs-btn');
-    if(fsBtn) fsBtn.style.display='';
-    // 清除inline尺寸（恢复CSS控制）
-    pa.style.width='';
-    pa.style.height='';
-    // 重置视频样式
-    if(v){
-      v.style.objectFit='';
-      v.style.aspectRatio='';
-      v.style.width='';
-      v.style.height='';
-    }
-    currentVideoRatio='contain';
+    // 移除全屏退出按钮
+    var exitBtn = pa.querySelector('.fs-exit-btn');
+    if(exitBtn) exitBtn.remove();
     // 把播放器移回原位
     if(pa._originalParent){
       if(pa._originalNextSibling){
         pa._originalParent.insertBefore(pa, pa._originalNextSibling);
-      } else {
-        pa._originalParent.appendChild(pa);
-      }
+      } else {pa._originalParent.appendChild(pa);}
       delete pa._originalParent;
       delete pa._originalNextSibling;
     }
   }
   if (isTvPage) {
     const tp = document.getElementById('tvPage');
-    if (tp) {
-      tp.style.overflow='';
-      tp.querySelectorAll('.tv-group-tabs,.tv-channel-area,.tv-source-bar').forEach(e=>e.style.display='');
-    }
+    if (tp) tp.querySelectorAll('.tv-group-tabs,.tv-channel-area,.tv-source-bar').forEach(e=>e.style.display='');
   } else {
     const dp=document.getElementById('detailPage');
-    if(dp){
-      dp.style.overflow='';
-      dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(e=>e.style.display='');
-    }
+    if(dp) dp.querySelectorAll('.top-bar,.detail-info,.episodes-section,.detail-actions,.source-tabs').forEach(e=>e.style.display='');
   }
   document.querySelectorAll('.bottom-nav').forEach(e=>e.style.display='');
-  // 桌面端恢复侧边栏
   const sideNav=document.getElementById('sideNav');
   if(sideNav) sideNav.style.display='';
-  // 退出全屏时恢复底部播放条（如果有播放中的视频）
   if(isPlaying) {
     const miniBar = document.getElementById('miniPlayerBar');
     if(miniBar) miniBar.style.display = '';
   }
-}
-
-// ==================== 全屏快退/快进/倍速控制 ====================
-let _fsSeekTimer = null;
-let _fsSeeking = false;
-let _fsSpeedIdx = 2; // 默认 1.0x
-const _fsSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-const _fsSpeedLabels = ['0.5x','0.75x','1.0x','1.25x','1.5x','2.0x'];
-
-function bindFsControlButtons(pa) {
-  const video = pa.querySelector('video');
-  if (!video) return;
-
-  // 快退按钮
-  const rewindBtn = pa.querySelector('#fsRewindBtn');
-  if (rewindBtn) {
-    const startRewind = (e) => {
-      e.preventDefault();
-      _fsSeeking = true;
-      _fsSeekVideo(video, -10);
-      clearInterval(_fsSeekTimer);
-      _fsSeekTimer = setInterval(() => {
-        if (_fsSeeking) _fsSeekVideo(video, -10);
-      }, 400);
-    };
-    const stopRewind = () => {
-      _fsSeeking = false;
-      clearInterval(_fsSeekTimer);
-    };
-    rewindBtn.addEventListener('touchstart', startRewind, {passive:false});
-    rewindBtn.addEventListener('mousedown', startRewind);
-    rewindBtn.addEventListener('touchend', stopRewind);
-    rewindBtn.addEventListener('touchcancel', stopRewind);
-    rewindBtn.addEventListener('mouseup', stopRewind);
-    rewindBtn.addEventListener('mouseleave', stopRewind);
-  }
-
-  // 快进按钮
-  const forwardBtn = pa.querySelector('#fsForwardBtn');
-  if (forwardBtn) {
-    const startForward = (e) => {
-      e.preventDefault();
-      _fsSeeking = true;
-      _fsSeekVideo(video, 10);
-      clearInterval(_fsSeekTimer);
-      _fsSeekTimer = setInterval(() => {
-        if (_fsSeeking) _fsSeekVideo(video, 10);
-      }, 400);
-    };
-    const stopForward = () => {
-      _fsSeeking = false;
-      clearInterval(_fsSeekTimer);
-    };
-    forwardBtn.addEventListener('touchstart', startForward, {passive:false});
-    forwardBtn.addEventListener('mousedown', startForward);
-    forwardBtn.addEventListener('touchend', stopForward);
-    forwardBtn.addEventListener('touchcancel', stopForward);
-    forwardBtn.addEventListener('mouseup', stopForward);
-    forwardBtn.addEventListener('mouseleave', stopForward);
-  }
-
-  // 倍速按钮 - 点击循环切换
-  const speedBtn = pa.querySelector('#fsSpeedBtn');
-  if (speedBtn) {
-    speedBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      _fsSpeedIdx = (_fsSpeedIdx + 1) % _fsSpeeds.length;
-      const speed = _fsSpeeds[_fsSpeedIdx];
-      const label = _fsSpeedLabels[_fsSpeedIdx];
-      speedBtn.textContent = label;
-      video.playbackRate = speed;
-      // 短暂高亮反馈
-      speedBtn.classList.add('active');
-      setTimeout(() => speedBtn.classList.remove('active'), 300);
-    });
-  }
-}
-
-function _fsSeekVideo(video, delta) {
-  if (!video || !video.duration) return;
-  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
-}
-
-// ==================== 全屏滑动快进功能 ====================
-function addFullscreenSwipe(playerArea) {
-  const video = playerArea.querySelector('video');
-  if (!video) return;
-  
-  let startX = 0, startY = 0;
-  let isSwiping = false;
-  let swipeDirection = '';
-  let hasMoved = false;
-  
-  const isTouchOutsideControls = (clientX, clientY) => {
-    const controls = playerArea.querySelector('.fullscreen-controls');
-    if (controls) {
-      const rect = controls.getBoundingClientRect();
-      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-        return false;
-      }
-    }
-    return true;
-  };
-  
-  const handleTouchStart = (e) => {
-    const touch = e.touches[0];
-    if (!isTouchOutsideControls(touch.clientX, touch.clientY)) return;
-    
-    startX = touch.clientX;
-    startY = touch.clientY;
-    isSwiping = true;
-    hasMoved = false;
-    swipeDirection = '';
-  };
-  
-  const handleTouchMove = (e) => {
-    if (!isSwiping) return;
-    const touch = e.touches[0];
-    const currentX = touch.clientX;
-    const currentY = touch.clientY;
-    const deltaX = currentX - startX;
-    const deltaY = currentY - startY;
-    
-    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
-      hasMoved = true;
-    }
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-      swipeDirection = deltaX > 0 ? 'right' : 'left';
-      e.preventDefault();
-      
-      const screenWidth = window.innerWidth;
-      const ratio = Math.abs(deltaX) / screenWidth;
-      const skipTime = Math.min(ratio * 60, 30);
-      
-      if (swipeDirection === 'right') {
-        video.currentTime = Math.min(video.currentTime + skipTime, video.duration || video.currentTime);
-      } else {
-        video.currentTime = Math.max(video.currentTime - skipTime, 0);
-      }
-      
-      showSwipeHint(swipeDirection, Math.round(skipTime));
-      
-      startX = currentX;
-      startY = currentY;
-    }
-  };
-  
-  const handleTouchEnd = (e) => {
-    if (!hasMoved && isSwiping) {
-      const touch = e.changedTouches[0];
-      if (isTouchOutsideControls(touch.clientX, touch.clientY)) {
-        if (video.paused) {
-          video.play().catch(() => {});
-        } else {
-          video.pause();
-        }
-      }
-    }
-    isSwiping = false;
-    hasMoved = false;
-  };
-  
-  playerArea.addEventListener('touchstart', handleTouchStart, { passive: false });
-  playerArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-  playerArea.addEventListener('touchend', handleTouchEnd);
-  
-  playerArea._swipeHandler = { touchstart: handleTouchStart, touchmove: handleTouchMove, touchend: handleTouchEnd };
-}
-
-// 显示滑动快进提示
-function showSwipeHint(direction, seconds) {
-  let hint = document.getElementById('swipe-hint');
-  if (!hint) {
-    hint = document.createElement('div');
-    hint.id = 'swipe-hint';
-    hint.className = 'swipe-hint';
-    document.body.appendChild(hint);
-  }
-  
-  hint.textContent = (direction === 'right' ? '快进' : '快退') + ' ' + seconds + '秒';
-  hint.style.display = 'block';
-  hint.classList.remove('fade-out');
-  
-  clearTimeout(hint._timer);
-  hint._timer = setTimeout(() => {
-    hint.classList.add('fade-out');
-    setTimeout(() => { hint.style.display = 'none'; }, 300);
-  }, 800);
 }
 
 // ==================== 视频比例切换 ====================
@@ -1517,6 +1252,7 @@ function cleanupPlayer(){
   if(pa){
     if(pa._progressTimer)clearInterval(pa._progressTimer);
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
+    if(pa._plyr){try{pa._plyr.destroy();}catch(e){}pa._plyr=null;}
   }
   const tpa=document.getElementById('tvPlayerArea');
   if(tpa){
@@ -1524,6 +1260,113 @@ function cleanupPlayer(){
     if(tpa._hls){tpa._hls.destroy();tpa._hls=null;}
   }
   if(tvHls){tvHls.destroy();tvHls=null;}
+}
+
+// ==================== Plyr 播放器初始化 ====================
+function _initPlyrPlayer(pa, video) {
+  // 销毁之前的 Plyr 实例
+  if (pa._plyr) { try { pa._plyr.destroy(); } catch(e) {} }
+  
+  const player = new Plyr(video, {
+    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings'],
+    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
+    clickToPlay: true,
+    hideControls: true,
+    keyboard: { focused: true, global: false },
+    tooltips: { controls: true, seek: true },
+    fullscreen: { enabled: false }  // 禁用 Plyr 内置全屏，使用 CSS 全屏方案
+  });
+  
+  pa._plyr = player;
+  
+  // Plyr ready 后注入自定义按钮
+  player.on('ready', function() { _addPlyrCustomButtons(pa, player, video); });
+  
+  // 双击 Plyr 容器进入全屏
+  player.on('ready', function() {
+    var plyrContainer = pa.querySelector('.plyr');
+    if (plyrContainer) {
+      plyrContainer.addEventListener('dblclick', function() {
+        if (!isCSSFullscreen) enterFullscreenMode();
+      });
+    }
+  });
+}
+
+function _addPlyrCustomButtons(pa, player, video) {
+  var controls = pa.querySelector('.plyr__controls');
+  if (!controls) return;
+  
+  var progress = controls.querySelector('.plyr__progress');
+  
+  // -- 快退 10s 按钮 --
+  var rewindBtn = document.createElement('button');
+  rewindBtn.type = 'button';
+  rewindBtn.className = 'plyr__controls__item plyr__control';
+  rewindBtn.innerHTML = '<span style="font-size:14px;line-height:1">\u00AB10s</span>';
+  rewindBtn.setAttribute('aria-label', '后退10秒');
+  var rewindTimer = null;
+  function startRewind(e) {
+    e.preventDefault();
+    video.currentTime = Math.max(0, video.currentTime - 10);
+    rewindTimer = setInterval(function() {
+      video.currentTime = Math.max(0, video.currentTime - 10);
+    }, 400);
+  }
+  function stopRewind() { clearInterval(rewindTimer); }
+  rewindBtn.addEventListener('mousedown', startRewind);
+  rewindBtn.addEventListener('touchstart', startRewind, {passive: false});
+  rewindBtn.addEventListener('mouseup', stopRewind);
+  rewindBtn.addEventListener('mouseleave', stopRewind);
+  rewindBtn.addEventListener('touchend', stopRewind);
+  rewindBtn.addEventListener('touchcancel', stopRewind);
+  
+  // -- 快进 10s 按钮 --
+  var forwardBtn = document.createElement('button');
+  forwardBtn.type = 'button';
+  forwardBtn.className = 'plyr__controls__item plyr__control';
+  forwardBtn.innerHTML = '<span style="font-size:14px;line-height:1">10s\u00BB</span>';
+  forwardBtn.setAttribute('aria-label', '前进10秒');
+  var forwardTimer = null;
+  function startForward(e) {
+    e.preventDefault();
+    if (video.duration) video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    forwardTimer = setInterval(function() {
+      if (video.duration) video.currentTime = Math.min(video.duration, video.currentTime + 10);
+    }, 400);
+  }
+  function stopForward() { clearInterval(forwardTimer); }
+  forwardBtn.addEventListener('mousedown', startForward);
+  forwardBtn.addEventListener('touchstart', startForward, {passive: false});
+  forwardBtn.addEventListener('mouseup', stopForward);
+  forwardBtn.addEventListener('mouseleave', stopForward);
+  forwardBtn.addEventListener('touchend', stopForward);
+  forwardBtn.addEventListener('touchcancel', stopForward);
+  
+  // -- 全屏按钮 --
+  var fsBtn = document.createElement('button');
+  fsBtn.type = 'button';
+  fsBtn.className = 'plyr__controls__item plyr__control';
+  fsBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
+  fsBtn.setAttribute('aria-label', '全屏');
+  fsBtn.setAttribute('data-plyr', 'fullscreen');
+  fsBtn.addEventListener('click', function(e) { e.preventDefault(); e.stopPropagation(); enterFullscreenMode(); });
+  
+  // 插入自定义按钮到 Plyr 控制栏
+  if (progress) {
+    controls.insertBefore(rewindBtn, progress);
+    // forwardBtn 插入到 progress 之后
+    if (progress.nextSibling) {
+      controls.insertBefore(forwardBtn, progress.nextSibling);
+    } else {
+      controls.appendChild(forwardBtn);
+    }
+  } else {
+    controls.appendChild(rewindBtn);
+    controls.appendChild(forwardBtn);
+  }
+  // 全屏按钮放到控制栏末尾
+  controls.appendChild(fsBtn);
 }
 
 function playCurrent() {
@@ -1538,126 +1381,16 @@ function playCurrent() {
   if(startOverlay) startOverlay.style.display = 'none';
   
   const video=document.createElement('video');
-  video.controls=false;video.autoplay=true;video.playsInline=true;
-  video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;z-index:1;pointer-events:none';
+  video.autoplay=true;video.playsInline=true;
+  video.style.cssText='width:100%;height:100%;background:#000;object-fit:contain;';
   video.setAttribute('playsinline','');video.setAttribute('webkit-playsinline','');
   video.setAttribute('x5-playsinline','');video.setAttribute('x5-video-player-type','h5');video.setAttribute('x5-video-player-fullscreen','true');
   pa.innerHTML='';pa.appendChild(video);
   
-  // 播放信息覆盖层
-  const infoOverlay=document.createElement('div');
-  infoOverlay.className='player-info-overlay';
-  const title=currentVideo?currentVideo.vod_name:'';
-  const ep=currentEpisode?currentEpisode.name:'';
-  infoOverlay.innerHTML=`<div class="pio-title">${title}</div>${ep?`<div class="pio-ep">${ep}</div>`:''}`;
-  pa.appendChild(infoOverlay);
+  // 初始化 Plyr 播放器
+  _initPlyrPlayer(pa, video);
   
-  // 自定义全屏按钮
-  const fsBtn=document.createElement('button');
-  fsBtn.className='video-fs-btn';
-  fsBtn.innerHTML='<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>';
-  fsBtn.onclick=(e)=>{e.stopPropagation();enterFullscreenMode();};
-  pa.appendChild(fsBtn);
-  
-  // 点击视频区域切换overlay显示/隐藏
-  let overlayVisible=true,overlayTimer=null;
-  function showOverlay(){overlayVisible=true;infoOverlay.classList.add('visible');if(isCSSFullscreen){video.controls=true;var fc=pa.querySelector('.fullscreen-controls');if(fc)fc.style.display='';}clearTimeout(overlayTimer);overlayTimer=setTimeout(()=>{overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc2=pa.querySelector('.fullscreen-controls');if(fc2)fc2.style.display='none';}},3000);}
-  function hideOverlay(){overlayVisible=false;infoOverlay.classList.remove('visible');if(isCSSFullscreen){video.controls=false;var fc3=pa.querySelector('.fullscreen-controls');if(fc3)fc3.style.display='none';}clearTimeout(overlayTimer);}
-  showOverlay();
-  let lastTap=0;
-  video.addEventListener('click',e=>{const now=Date.now();if(now-lastTap<300){if(!isCSSFullscreen)enterFullscreenMode();e.preventDefault();}else{if(overlayVisible)hideOverlay();else showOverlay();}lastTap=now;});
-  
-  // 左右滑动快进快退 - 透明手势层覆盖在视频上
-  var vTouchStartX=0, vTouchStartY=0, vTouchStartTime=0, vSeeking=false;
-  var seekOverlay=document.createElement('div');
-  seekOverlay.className='video-seek-overlay';
-  seekOverlay.style.cssText='display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);color:#fff;padding:10px 20px;border-radius:8px;font-size:16px;z-index:10;pointer-events:none;white-space:nowrap;';
-  pa.appendChild(seekOverlay);
-  // 手势覆盖层：放在视频上方，不阻挡点击（点击穿透给video）
-  var gestureLayer=document.createElement('div');
-  gestureLayer.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;z-index:5;touch-action:pan-y;';
-  pa.appendChild(gestureLayer);
-  // 点击穿透给视频（暂停/播放），触摸滑动由手势层处理
-  var tapTimer=null;
-  gestureLayer.addEventListener('click',function(e){
-    if(tapTimer){clearTimeout(tapTimer);tapTimer=null;return;}
-    tapTimer=setTimeout(function(){
-      tapTimer=null;
-      if(!video.paused){video.pause();}  // 只处理暂停，播放由playBtn处理
-    },250);
-  });
-  gestureLayer.addEventListener('dblclick',function(e){
-    e.preventDefault();
-    if(!isCSSFullscreen)enterFullscreenMode();
-  });
-  // 中央播放/暂停按钮
-  var playBtn=document.createElement('div');
-  playBtn.className='video-play-btn';
-  playBtn.innerHTML='<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';
-  playBtn.style.cssText='position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:6;pointer-events:auto;transition:opacity 0.3s;';
-  playBtn.querySelector('svg').style.cssText='width:28px;height:28px;margin-left:3px;';
-  pa.appendChild(playBtn);
-  playBtn.onclick=function(e){e.stopPropagation();if(video.paused){video.play().catch(function(){});}else{video.pause();}};
-  video.addEventListener('play',function(){playBtn.style.opacity='0';playBtn.style.pointerEvents='none';customBar.style.opacity='1';});
-  video.addEventListener('pause',function(){playBtn.innerHTML='<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';playBtn.querySelector('svg').style.cssText='width:28px;height:28px;margin-left:3px;';playBtn.style.opacity='1';playBtn.style.pointerEvents='auto';});
-  video.addEventListener('playing',function(){playBtn.style.opacity='0';playBtn.style.pointerEvents='none';});
-  gestureLayer.addEventListener('touchstart',function(e){
-    if(e.touches.length!==1)return;
-    vTouchStartX=e.touches[0].clientX;
-    vTouchStartY=e.touches[0].clientY;
-    vTouchStartTime=Date.now();
-    vSeeking=false;
-  },{passive:true});
-  gestureLayer.addEventListener('touchmove',function(e){
-    if(e.touches.length!==1)return;
-    var dx=e.touches[0].clientX-vTouchStartX;
-    var dy=Math.abs(e.touches[0].clientY-vTouchStartY);
-    if(!vSeeking && Math.abs(dx)>30 && dy<60){
-      vSeeking=true;
-    }
-    if(vSeeking && video.duration){
-      e.preventDefault();
-      var seekSec=Math.round(dx/5);
-      seekSec=Math.max(-30,Math.min(30,seekSec));
-      var targetTime=Math.max(0,Math.min(video.duration,video.currentTime+seekSec));
-      var dir=seekSec>0?'>> ':'<< ';
-      var sec=Math.abs(seekSec);
-      seekOverlay.textContent=dir+sec+'s';
-      seekOverlay.style.display='block';
-      pa._seekTarget=targetTime;
-    }
-  },{passive:false});
-  gestureLayer.addEventListener('touchend',function(){
-    if(vSeeking && pa._seekTarget!==undefined){
-      video.currentTime=pa._seekTarget;
-      delete pa._seekTarget;
-    }
-    vSeeking=false;
-    seekOverlay.style.display='none';
-  },{passive:true});
-  
-  // 自定义进度条（替代原生控件）
-  var customBar=document.createElement('div');
-  customBar.className='custom-video-bar';
-  customBar.innerHTML='<div class="cvb-progress"><div class="cvb-buffered"></div><div class="cvb-played"></div></div><div class="cvb-time"><span class="cvb-cur">00:00</span><span class="cvb-dur">00:00</span></div>';
-  pa.appendChild(customBar);
-  var cvbPlayed=customBar.querySelector('.cvb-played');
-  var cvbBuffered=customBar.querySelector('.cvb-buffered');
-  var cvbCur=customBar.querySelector('.cvb-cur');
-  var cvbDur=customBar.querySelector('.cvb-dur');
-  var cvbProgress=customBar.querySelector('.cvb-progress');
-  function fmtTime(s){if(!s||isNaN(s))return'00:00';var m=Math.floor(s/60);s=Math.floor(s%60);return(m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
-  video.addEventListener('timeupdate',function(){
-    if(video.duration){cvbPlayed.style.width=(video.currentTime/video.duration*100)+'%';cvbCur.textContent=fmtTime(video.currentTime);}
-  });
-  video.addEventListener('loadedmetadata',function(){cvbDur.textContent=fmtTime(video.duration);});
-  video.addEventListener('progress',function(){
-    if(video.buffered.length>0&&video.duration){cvbBuffered.style.width=(video.buffered.end(video.buffered.length-1)/video.duration*100)+'%';}
-  });
-  cvbProgress.addEventListener('click',function(e){
-    e.stopPropagation();
-    if(video.duration){var r=cvbProgress.getBoundingClientRect();video.currentTime=(e.clientX-r.left)/r.width*video.duration;}
-  });
+  // HLS / 直接播放
   if(currentPlayUrl.includes('.m3u8')&&typeof Hls!=='undefined'&&Hls.isSupported()){
     const hls=new Hls({maxBufferLength:30,maxMaxBufferLength:60});hls.loadSource(currentPlayUrl);hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED,()=>video.play());
@@ -1677,9 +1410,7 @@ function playCurrent() {
   video.addEventListener('pause',()=>{
     if(currentVideo&&currentEpisode)saveHistory(currentVideo,currentEpisode.name);
   });
-  video.addEventListener('ended',()=>{
-    clearInterval(progressTimer);
-  });
+  video.addEventListener('ended',()=>{clearInterval(progressTimer);});
   
   // 如果有历史进度，跳转到上次位置
   const hist=getHistory();
