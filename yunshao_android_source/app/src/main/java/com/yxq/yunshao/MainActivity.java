@@ -767,17 +767,20 @@ public class MainActivity extends Activity {
         if (!isFullscreen) return;
         isFullscreen = false;
         handler.removeCallbacksAndMessages(null);
-        // 不再强制竖屏！让设备保持当前方向（平板横屏时退出全屏不应切回竖屏）
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         
-        // 清除全屏flags，恢复状态栏区域
+        // 1. 先 JS 清理 DOM（move pa back, remove fs-exit-btn, 恢复页面布局）
+        //    必须在屏幕旋转之前执行，否则异步 JS 跑在已旋转的画面上 → 半全屏半正常态 → 黑屏
+        webView.evaluateJavascript(
+            "if(typeof removeFullscreenCSS==='function')removeFullscreenCSS();",
+            null
+        );
+        
+        // 2. 清理 UI 层（fullscreenContainer、flags 等）
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
         
-        // 移除全屏内容（包括原生控件和视频View）
         fullscreenContainer.removeAllViews();
         fullscreenContainer.setVisibility(View.GONE);
-        // 清空原生控件引用（下次addFullscreenControls会重建）
         topBarView = null;
         bottomBar = null;
         touchLayerView = null;
@@ -786,10 +789,8 @@ public class MainActivity extends Activity {
         playPauseBtn = null;
         speedBtn = null;
         
-        // 将全屏容器从DecorView移回rootView
+        // 处理 fullscreenContainer 位置
         FrameLayout decorView = (FrameLayout) getWindow().getDecorView();
-        // v3.22.3: CSS全屏模式下 fullscreenContainer 仍在 rootView 中，不在 decorView 中。
-        // 只有 onShowCustomView（原生全屏）时它才在 decorView 中。
         if (fullscreenContainer.getParent() == decorView) {
             decorView.removeView(fullscreenContainer);
             rootView.addView(fullscreenContainer, new FrameLayout.LayoutParams(
@@ -797,30 +798,23 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
             ));
         } else {
-            // CSS全屏：容器已在 rootView 中，只需确保可见
             fullscreenContainer.setVisibility(View.VISIBLE);
         }
         
-        // 恢复WebView
         webView.setVisibility(View.VISIBLE);
         
-        // 通知WebView退出自定义视图
         if (customViewCallback != null) {
             try { customViewCallback.onCustomViewHidden(); } catch (Exception e) {}
             customViewCallback = null;
         }
         customView = null;
         
-        showSystemBars();
-        
-        // v3.22: 统一使用 removeFullscreenCSS() 做全量清理（移动DOM+重置样式+恢复布局）
-        webView.evaluateJavascript(
-            "if(typeof removeFullscreenCSS==='function')removeFullscreenCSS();",
-            null
-        );
-        
-        // 恢复主题状态栏
-        if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
+        // 3. 延迟恢复方向，让 JS 先跑完 DOM 清理
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+            showSystemBars();
+            if (isDarkTheme) setDarkStatusBar(); else setLightStatusBar();
+        }, 150);
     }
 
     /**
