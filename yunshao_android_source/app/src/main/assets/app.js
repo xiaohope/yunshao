@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.20.0 (Plyr集成) ====================
+// ==================== 云梢 v3.20.1 (Plyr集成修复) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -1271,23 +1271,24 @@ function _initPlyrPlayer(pa, video) {
     controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings'],
     speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
     clickToPlay: true,
-    hideControls: true,
+    hideControls: false,  // 始终显示控制栏
     keyboard: { focused: true, global: false },
     tooltips: { controls: true, seek: true },
-    fullscreen: { enabled: false }  // 禁用 Plyr 内置全屏，使用 CSS 全屏方案
+    fullscreen: { enabled: false }  // 禁用 Plyr 内置全屏，使用 CSS 全屏 + 自定义按钮
   });
   
   pa._plyr = player;
   
-  // Plyr ready 后注入自定义按钮
+  // Plyr ready 后注入自定义按钮（快进/快退/全屏）
   player.on('ready', function() { _addPlyrCustomButtons(pa, player, video); });
   
-  // 双击 Plyr 容器进入全屏
+  // 双击 Plyr 容器进入/退出全屏
   player.on('ready', function() {
     var plyrContainer = pa.querySelector('.plyr');
     if (plyrContainer) {
       plyrContainer.addEventListener('dblclick', function() {
-        if (!isCSSFullscreen) enterFullscreenMode();
+        if (isCSSFullscreen) exitFullscreenMode();
+        else enterFullscreenMode();
       });
     }
   });

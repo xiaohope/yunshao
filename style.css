@@ -489,11 +489,31 @@ body.theme-dark .section-card {
   width:100%; 
   aspect-ratio: 16/9;
   background:#000; 
-  display:flex; 
-  align-items:center; 
-  justify-content:center; 
   position:relative; 
-  overflow:hidden;
+  overflow:visible; /* Plyr 控制栏需要不被裁剪 */
+}
+/* Plyr 容器：填满播放器区域 */
+.detail-player .plyr {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+}
+.detail-player .plyr__video-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  background: #000 !important;
+}
+/* Plyr 控制栏始终可见（底部固定） */
+.detail-player .plyr__controls {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10 !important;
+}
+/* Plyr 全屏按钮 - 我们的自定义按钮样式 */
+.detail-player .plyr__control[data-plyr="fullscreen"] {
+  margin-left: auto !important;
 }
 
 .detail-player video { 
