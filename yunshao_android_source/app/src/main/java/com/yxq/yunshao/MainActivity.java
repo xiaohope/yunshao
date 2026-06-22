@@ -849,13 +849,15 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // 检查JS层是否处于CSS全屏状态
+        // v3.21.1: 全屏状态同步检测，避免 evaluateJavascript 异步竞态导致直接退出 App
+        if (isFullscreen) {
+            exitFullscreenInternal();
+            return;
+        }
+        
+        // 非全屏时，检查JS层是否需要返回上一页
         webView.evaluateJavascript(
             "(function(){" +
-            "  if(typeof isCSSFullscreen!=='undefined'&&isCSSFullscreen){" +
-            "    if(typeof exitFullscreenMode==='function')exitFullscreenMode();" +
-            "    return 'fullscreen';" +
-            "  }" +
             "  var page=document.querySelector('.page.active');" +
             "  var mainPages=['homePage','catPage','tvPage','profilePage'];" +
             "  if(page&&!mainPages.includes(page.id)){" +
@@ -866,8 +868,7 @@ public class MainActivity extends Activity {
             "})()",
             result -> {
                 String r = result != null ? result.replace("\"", "").trim() : "exit";
-                if ("fullscreen".equals(r) || "back".equals(r)) {
-                    // 已经是全屏或返回，不做任何操作，等待JS处理完成
+                if ("back".equals(r)) {
                     return;
                 }
                 if ("exit".equals(r)) {
@@ -875,7 +876,6 @@ public class MainActivity extends Activity {
                         MainActivity.super.onBackPressed();
                     } else {
                         doubleBackToExit = true;
-                        // 用JS显示toast提示
                         webView.evaluateJavascript("if(typeof showToast==='function')showToast('再按一次退出云梢');", null);
                         new Handler(Looper.getMainLooper()).postDelayed(() -> doubleBackToExit = false, 2000);
                     }

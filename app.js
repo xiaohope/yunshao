@@ -1,4 +1,4 @@
-// ==================== 云梢 v3.21.0 (全屏自动方向) ====================
+// ==================== 云梢 v3.21.1 (全屏返回修复 + 快进快退 + 控制栏自动隐藏) ====================
 const API = 'http://localhost:8989';
 // 后端是否存活的标记（undefined 表示尚未检测，false 表示后端不可达）
 let _backendAlive = undefined;
@@ -1264,6 +1264,7 @@ function cleanupPlayer(){
   const pa=document.getElementById('playerArea');
   if(pa){
     if(pa._progressTimer)clearInterval(pa._progressTimer);
+    if(pa._hideControlsTimer){clearTimeout(pa._hideControlsTimer);pa._hideControlsTimer=null;}
     if(pa._hls){pa._hls.destroy();pa._hls=null;}
     if(pa._plyr){try{pa._plyr.destroy();}catch(e){}pa._plyr=null;}
   }
@@ -1284,7 +1285,7 @@ function _initPlyrPlayer(pa, video) {
     controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'settings'],
     speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
     clickToPlay: true,
-    hideControls: false,  // 始终显示控制栏
+    hideControls: false,  // 我们手动管理隐藏逻辑
     keyboard: { focused: true, global: false },
     tooltips: { controls: true, seek: true },
     fullscreen: { enabled: false }  // 禁用 Plyr 内置全屏，使用 CSS 全屏 + 自定义按钮
@@ -1304,6 +1305,53 @@ function _initPlyrPlayer(pa, video) {
         else enterFullscreenMode();
       });
     }
+  });
+
+  // ===== 控制栏自动隐藏（3秒无操作隐藏，暂停时显示） =====
+  pa._hideControlsTimer = null;
+  pa._controlsVisible = true;
+
+  function showControls() {
+    if (pa._hideControlsTimer) { clearTimeout(pa._hideControlsTimer); pa._hideControlsTimer = null; }
+    var ctrls = pa.querySelector('.plyr__controls');
+    if (ctrls) { ctrls.classList.remove('controls-hidden'); }
+    pa._controlsVisible = true;
+  }
+
+  function hideControlsAfter(delay) {
+    showControls(); // 先显示再开始计时
+    if (pa._hideControlsTimer) clearTimeout(pa._hideControlsTimer);
+    pa._hideControlsTimer = setTimeout(function() {
+      var ctrls = pa.querySelector('.plyr__controls');
+      if (ctrls && !video.paused) { // 只在播放中隐藏
+        ctrls.classList.add('controls-hidden');
+        pa._controlsVisible = false;
+      }
+    }, delay);
+  }
+
+  // 播放时：3秒后自动隐藏
+  player.on('play', function() {
+    hideControlsAfter(3000);
+  });
+
+  // 暂停时：立即显示
+  player.on('pause', function() {
+    showControls();
+  });
+
+  // 鼠标/触摸活动：显示控制栏并重置计时
+  pa.addEventListener('mousemove', function() {
+    if (pa._controlsVisible) return; // 已显示，不重复操作
+    hideControlsAfter(3000);
+  });
+  pa.addEventListener('touchstart', function() {
+    hideControlsAfter(3000);
+  }, {passive: true});
+
+  // 结束时显示控制栏
+  player.on('ended', function() {
+    showControls();
   });
 }
 

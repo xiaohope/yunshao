@@ -1,4 +1,4 @@
-/* ==================== 云梢 v3.5.1 ==================== */
+/* ==================== 云梢 v3.21.1 ==================== */
 /* 影视流媒体APP设计规范 - Dark Mode (OLED) + Motion-Driven */
 
 /* 加载旋转图标动画 */
@@ -510,6 +510,26 @@ body.theme-dark .section-card {
   left: 0 !important;
   right: 0 !important;
   z-index: 10 !important;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+/* 控制栏自动隐藏 */
+.detail-player .plyr__controls.controls-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+/* 全屏时同样支持自动隐藏 */
+.player-fullscreen .plyr__controls {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+.player-fullscreen .plyr__controls.controls-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 /* Plyr 全屏按钮 - 我们的自定义按钮样式 */
 .detail-player .plyr__control[data-plyr="fullscreen"] {
@@ -626,7 +646,7 @@ video::-webkit-media-controls-fullscreen-button {
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;
-  overflow: hidden !important;
+  overflow: visible !important; /* Plyr 控制栏需不被裁剪 */
   display: block !important;
 }
 .player-fullscreen video,
