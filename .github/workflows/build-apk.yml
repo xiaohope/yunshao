@@ -32,6 +32,13 @@ jobs:
         api-level: 33
         build-tools: 33.0.2
 
+    - name: Generate release keystore
+      run: |
+        keytool -genkey -v -keystore yunshao_android_source/yunshao-release.keystore \
+          -alias yunshao -keyalg RSA -keysize 2048 -validity 3650 \
+          -storepass yunshao123 -keypass yunshao123 \
+          -dname "CN=YunShao, OU=YunShao, O=YunShao, L=Beijing, ST=Beijing, C=CN"
+
     - name: Build Debug APK
       working-directory: yunshao_android_source
       run: ./gradlew assembleDebug
@@ -45,7 +52,6 @@ jobs:
     - name: Build Release APK
       working-directory: yunshao_android_source
       run: ./gradlew assembleRelease
-      continue-on-error: true
 
     - name: Upload Release APK
       if: success()
